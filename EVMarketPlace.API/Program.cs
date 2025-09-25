@@ -1,3 +1,7 @@
+using EVMarketPlace.Repositories.Repository;
+using EVMarketPlace.Services.Implements;
+using EVMarketPlace.Services.Interfaces;
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
@@ -6,6 +10,8 @@ builder.Services.AddControllers();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
+builder.Services.AddScoped<IUserService, UserService>();
+builder.Services.AddScoped<UserRepository>();  
 
 var app = builder.Build();
 
