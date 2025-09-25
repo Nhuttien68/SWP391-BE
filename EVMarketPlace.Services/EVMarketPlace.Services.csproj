@@ -6,4 +6,8 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\EVMarketPlace.Repositories\EVMarketPlace.Repositories.csproj" />
+  </ItemGroup>
+
 </Project>
