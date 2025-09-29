@@ -1,10 +1,11 @@
-﻿namespace EVMarketPlace.Repositories.RequestDTO;
-
-public class UpdatePostRequest
+﻿namespace EVMarketPlace.Repositories.RequestDTO
 {
-    public string Type { get; set; } = "";
-    public string Title { get; set; } = "";
-    public string? Description { get; set; }
-    public decimal Price { get; set; }
-    public bool IsActive { get; set; }
+    public class UpdatePostRequest
+    {
+        public string? Type { get; set; }
+        public string? Title { get; set; }
+        public string? Description { get; set; }
+        public decimal? Price { get; set; }
+        public bool? IsActive { get; set; }   
+    }
 }
