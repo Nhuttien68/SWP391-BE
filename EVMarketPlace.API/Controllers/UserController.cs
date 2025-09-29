@@ -25,5 +25,10 @@ namespace EVMarketPlace.API.Controllers
         {
             return await _userService.CreateAccount(request);
         }
+        [HttpPost("login")]
+        public async Task<BaseRespone> Login(LoginRequest request)
+        {
+            return await _userService.LoginAsync(request);
+        }
     }
 }
