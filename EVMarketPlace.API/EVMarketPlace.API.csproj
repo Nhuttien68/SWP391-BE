@@ -4,16 +4,25 @@
     <TargetFramework>net8.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
+    <UserSecretsId>f9f317a4-a994-4eaa-8612-a556265e2a5f</UserSecretsId>
   </PropertyGroup>
 
   <ItemGroup>
+
     <PackageReference Include="MailKit" Version="4.14.0" />
     <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="8.0.20" />
     <PackageReference Include="Microsoft.AspNetCore.Identity.UI" Version="8.0.20" />
+
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="8.0.20">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+
     <PackageReference Include="Swashbuckle.AspNetCore" Version="6.6.2" />
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\EVMarketPlace.Repositories\EVMarketPlace.Repositories.csproj" />
     <ProjectReference Include="..\EVMarketPlace.Services\EVMarketPlace.Services.csproj" />
   </ItemGroup>
 

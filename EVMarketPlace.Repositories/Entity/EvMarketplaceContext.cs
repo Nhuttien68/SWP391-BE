@@ -57,7 +57,13 @@ public partial class EvMarketplaceContext : DbContext
             .AddJsonFile("appsettings.json")
             .Build();
 
-        string connectionString = config.GetConnectionString(connectionStringName);
+        string? connectionString = config.GetConnectionString(connectionStringName);
+
+        if (string.IsNullOrEmpty(connectionString))
+        {
+            throw new InvalidOperationException($"Connection string '{connectionStringName}' not found in appsettings.json");
+        }
+
         return connectionString;
     }
 
