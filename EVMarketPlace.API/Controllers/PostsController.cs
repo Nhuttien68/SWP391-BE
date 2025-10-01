@@ -1,7 +1,9 @@
-﻿using EVMarketPlace.Repositories.RequestDTO;
+﻿using EVMarketPlace.Repositories.Options;
+using EVMarketPlace.Repositories.RequestDTO;
 using EVMarketPlace.Repositories.ResponseDTO;
 using EVMarketPlace.Services.Interfaces;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Options;
 
 namespace EVMarketPlace.API.Controllers;
 
@@ -11,25 +13,32 @@ namespace EVMarketPlace.API.Controllers;
 public class PostsController : ControllerBase
 {
     private readonly IPostService _svc;
+    private readonly IOptions<PaginationOptions> _pg;
 
-    public PostsController(IPostService svc)
+    public PostsController(IPostService svc, IOptions<PaginationOptions> pg)
     {
         _svc = svc;
+        _pg = pg;
     }
 
-    // GET /api/Posts?keyword=&type=&page=1&pageSize=10
+    // GET /api/Posts?keyword=&type=&page=&pageSize=
+
     [HttpGet]
     [ProducesResponseType(typeof(PagedResponse<PostListItemDto>), StatusCodes.Status200OK)]
     public async Task<IActionResult> Get(
         [FromQuery] string? keyword,
         [FromQuery] string? type,
-        [FromQuery] int page = 1,
-        [FromQuery] int pageSize = 10,
+        [FromQuery] int? page,
+        [FromQuery] int? pageSize,
         CancellationToken ct = default)
     {
-        var (total, items) = await _svc.GetListAsync(keyword, type, page, pageSize, ct);
-        var resp = new PagedResponse<PostListItemDto>(items, page, pageSize, total);
-        return Ok(resp);
+        int p = page ?? _pg.Value.DefaultPage;
+        int ps = pageSize ?? _pg.Value.DefaultPageSize;
+
+        var (total, items) = await _svc.GetListAsync(keyword, type, p, ps, ct);
+        // Cho FE đọc nhanh tổng bản ghi
+        Response.Headers["X-Total-Count"] = total.ToString();
+        return Ok(new PagedResponse<PostListItemDto>(items, p, ps, total));
     }
 
 
@@ -48,7 +57,7 @@ public class PostsController : ControllerBase
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> Create([FromBody] CreatePostRequest req, CancellationToken ct = default)
     {
-        if (!ModelState.IsValid) return ValidationProblem(ModelState);
+        
 
         try
         {
@@ -58,8 +67,8 @@ public class PostsController : ControllerBase
         }
         catch (ArgumentException ex)
         {
-            
-            return BadRequest(new { error = ex.Message });
+
+            return BadRequest(new ProblemDetails { Title = "Invalid request", Detail = ex.Message, Status = StatusCodes.Status400BadRequest });
         }
     }
 
@@ -70,7 +79,6 @@ public class PostsController : ControllerBase
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> Update(Guid id, [FromBody] UpdatePostRequest req, CancellationToken ct = default)
     {
-        if (!ModelState.IsValid) return ValidationProblem(ModelState);
 
         try
         {
@@ -79,7 +87,7 @@ public class PostsController : ControllerBase
         }
         catch (ArgumentException ex)
         {
-            return BadRequest(new { error = ex.Message });
+            return BadRequest(new ProblemDetails { Title = "Invalid request", Detail = ex.Message, Status = StatusCodes.Status400BadRequest });
         }
     }
 

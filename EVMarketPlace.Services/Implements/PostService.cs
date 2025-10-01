@@ -3,6 +3,8 @@ using EVMarketPlace.Repositories.Entity;
 using EVMarketPlace.Repositories.RequestDTO;
 using EVMarketPlace.Repositories.ResponseDTO;
 using EVMarketPlace.Services.Interfaces;
+using EVMarketPlace.Repositories.Options;
+using Microsoft.Extensions.Options;
 using Microsoft.EntityFrameworkCore;
 
 namespace EVMarketPlace.Services.Implements
@@ -10,31 +12,30 @@ namespace EVMarketPlace.Services.Implements
     public class PostService : IPostService
     {
         private readonly AppDbContext _db;
-        public PostService(AppDbContext db) => _db = db;
+        private readonly int _maxPageSize;
 
-        // ----------------------------
-        // GET LIST POSTS (paging + filter)
-        // ----------------------------
+        public PostService(AppDbContext db, IOptions<PaginationOptions> pg)
+        {
+            _db = db;
+            _maxPageSize = pg.Value.MaxPageSize; // lấy từ config
+        }
+
         public async Task<(int total, IEnumerable<PostListItemDto> items)> GetListAsync(
             string? keyword, string? type, int page, int pageSize, CancellationToken ct = default)
         {
-            // Chuẩn hóa tham số
             page = Math.Max(1, page);
-            pageSize = Math.Clamp(pageSize, 1, 100);
+            pageSize = Math.Clamp(pageSize, 1, _maxPageSize); // <— không hard-code số 100 nữa
 
-            IQueryable<Post> q = _db.Posts
-                .AsNoTracking()
-                .OrderByDescending(p => p.CreatedAt);
+            var q = _db.Posts.AsNoTracking()
+                             .OrderByDescending(p => p.CreatedAt)
+                             .AsQueryable();
 
-            // Tìm theo keyword (dùng LIKE, giữ index, an toàn)
             if (!string.IsNullOrWhiteSpace(keyword))
             {
                 var kw = $"%{keyword.Trim()}%";
-                q = q.Where(p =>
-                    EF.Functions.Like(p.Title, kw) ||
-                    EF.Functions.Like(p.Description ?? string.Empty, kw));
+                q = q.Where(p => EF.Functions.Like(p.Title, kw)
+                               || EF.Functions.Like(p.Description ?? string.Empty, kw));
             }
-
 
             if (!string.IsNullOrWhiteSpace(type))
             {
@@ -43,20 +44,20 @@ namespace EVMarketPlace.Services.Implements
             }
 
             var total = await q.CountAsync(ct);
-            var items = await q
-                .Skip((page - 1) * pageSize)
-                .Take(pageSize)
-                .Select(p => new PostListItemDto
-                {
-                    PostId = p.PostId,
-                    UserId = p.UserId,
-                    Type = p.Type,
-                    Title = p.Title,
-                    Price = p.Price,
-                    IsActive = p.IsActive,
-                    CreatedAt = p.CreatedAt
-                })
-                .ToListAsync(ct);
+
+            var items = await q.Skip((page - 1) * pageSize)
+                               .Take(pageSize)
+                               .Select(p => new PostListItemDto
+                               {
+                                   PostId = p.PostId,
+                                   UserId = p.UserId,
+                                   Type = p.Type,
+                                   Title = p.Title,
+                                   Price = p.Price,
+                                   IsActive = p.IsActive,
+                                   CreatedAt = p.CreatedAt
+                               })
+                               .ToListAsync(ct);
 
             return (total, items);
         }
