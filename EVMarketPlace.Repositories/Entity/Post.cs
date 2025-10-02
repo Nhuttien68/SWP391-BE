@@ -17,9 +17,9 @@ public partial class Post
 
     public decimal Price { get; set; }
 
-    public bool IsActive { get; set; } 
+    public bool IsActive { get; set; }
 
-    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public DateTime CreatedAt { get; set; }
 
     public virtual ICollection<Auction> Auctions { get; set; } = new List<Auction>();
 
@@ -28,6 +28,8 @@ public partial class Post
     public virtual ICollection<CartItem> CartItems { get; set; } = new List<CartItem>();
 
     public virtual ICollection<Favorite> Favorites { get; set; } = new List<Favorite>();
+
+    public virtual ICollection<PostImage> PostImages { get; set; } = new List<PostImage>();
 
     public virtual ICollection<Transaction> Transactions { get; set; } = new List<Transaction>();
 

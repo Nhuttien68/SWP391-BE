@@ -1,4 +1,6 @@
-﻿
+﻿using System;
+using System.Collections.Generic;
+
 namespace EVMarketPlace.Repositories.Entity;
 
 public partial class BatteryBrand

@@ -4,8 +4,7 @@ using System;
 using System.Collections.Generic;
 
 namespace EVMarketPlace.Repositories.Entity;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Configuration;
+
 public partial class EvMarketplaceContext : DbContext
 {
     public EvMarketplaceContext()
@@ -32,6 +31,8 @@ public partial class EvMarketplaceContext : DbContext
     public virtual DbSet<Favorite> Favorites { get; set; }
 
     public virtual DbSet<Post> Posts { get; set; }
+
+    public virtual DbSet<PostImage> PostImages { get; set; }
 
     public virtual DbSet<Review> Reviews { get; set; }
 
@@ -73,7 +74,7 @@ public partial class EvMarketplaceContext : DbContext
     {
         modelBuilder.Entity<Auction>(entity =>
         {
-            entity.HasKey(e => e.AuctionId).HasName("PK__auctions__2FF78640BDD94866");
+            entity.HasKey(e => e.AuctionId).HasName("PK__auctions__2FF78640A571367E");
 
             entity.ToTable("auctions");
 
@@ -100,7 +101,7 @@ public partial class EvMarketplaceContext : DbContext
 
         modelBuilder.Entity<AuctionBid>(entity =>
         {
-            entity.HasKey(e => e.BidId).HasName("PK__auction___3DF04596CADB278D");
+            entity.HasKey(e => e.BidId).HasName("PK__auction___3DF0459669E33F3C");
 
             entity.ToTable("auction_bids");
 
@@ -129,7 +130,7 @@ public partial class EvMarketplaceContext : DbContext
 
         modelBuilder.Entity<Battery>(entity =>
         {
-            entity.HasKey(e => e.BatteryId).HasName("PK__batterie__31C8DB8ECDADEA33");
+            entity.HasKey(e => e.BatteryId).HasName("PK__batterie__31C8DB8E03AE7A4E");
 
             entity.ToTable("batteries");
 
@@ -156,7 +157,7 @@ public partial class EvMarketplaceContext : DbContext
 
         modelBuilder.Entity<BatteryBrand>(entity =>
         {
-            entity.HasKey(e => e.BrandId).HasName("PK__battery___5E5A8E27A7DB4DD5");
+            entity.HasKey(e => e.BrandId).HasName("PK__battery___5E5A8E27096AAD53");
 
             entity.ToTable("battery_brands");
 
@@ -170,7 +171,7 @@ public partial class EvMarketplaceContext : DbContext
 
         modelBuilder.Entity<CartItem>(entity =>
         {
-            entity.HasKey(e => e.CartItemId).HasName("PK__cart_ite__5D9A6C6EC492B6B2");
+            entity.HasKey(e => e.CartItemId).HasName("PK__cart_ite__5D9A6C6E736F74B3");
 
             entity.ToTable("cart_items");
 
@@ -197,7 +198,7 @@ public partial class EvMarketplaceContext : DbContext
 
         modelBuilder.Entity<Contract>(entity =>
         {
-            entity.HasKey(e => e.ContractId).HasName("PK__contract__F8D66423A337E2BF");
+            entity.HasKey(e => e.ContractId).HasName("PK__contract__F8D66423E463A8E8");
 
             entity.ToTable("contracts");
 
@@ -220,7 +221,7 @@ public partial class EvMarketplaceContext : DbContext
 
         modelBuilder.Entity<Favorite>(entity =>
         {
-            entity.HasKey(e => e.FavoriteId).HasName("PK__favorite__46ACF4CB8CF19780");
+            entity.HasKey(e => e.FavoriteId).HasName("PK__favorite__46ACF4CBF4DA13EE");
 
             entity.ToTable("favorites");
 
@@ -246,7 +247,7 @@ public partial class EvMarketplaceContext : DbContext
 
         modelBuilder.Entity<Post>(entity =>
         {
-            entity.HasKey(e => e.PostId).HasName("PK__posts__3ED7876688FC7BF9");
+            entity.HasKey(e => e.PostId).HasName("PK__posts__3ED78766F1E5F8BC");
 
             entity.ToTable("posts");
 
@@ -275,9 +276,33 @@ public partial class EvMarketplaceContext : DbContext
                 .HasConstraintName("FK__posts__user_id__4222D4EF");
         });
 
+        modelBuilder.Entity<PostImage>(entity =>
+        {
+            entity.HasKey(e => e.ImageId).HasName("PK__post_ima__DC9AC95502A0262E");
+
+            entity.ToTable("post_images");
+
+            entity.Property(e => e.ImageId)
+                .ValueGeneratedNever()
+                .HasColumnName("image_id");
+            entity.Property(e => e.ImageUrl)
+                .HasMaxLength(500)
+                .HasColumnName("image_url");
+            entity.Property(e => e.PostId).HasColumnName("post_id");
+            entity.Property(e => e.UploadedAt)
+                .HasDefaultValueSql("(getdate())")
+                .HasColumnType("datetime")
+                .HasColumnName("uploaded_at");
+
+            entity.HasOne(d => d.Post).WithMany(p => p.PostImages)
+                .HasForeignKey(d => d.PostId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK__post_imag__post___6B24EA82");
+        });
+
         modelBuilder.Entity<Review>(entity =>
         {
-            entity.HasKey(e => e.ReviewId).HasName("PK__reviews__60883D906A8A0A35");
+            entity.HasKey(e => e.ReviewId).HasName("PK__reviews__60883D90BF1F092D");
 
             entity.ToTable("reviews");
 
@@ -305,7 +330,7 @@ public partial class EvMarketplaceContext : DbContext
 
         modelBuilder.Entity<ShoppingCart>(entity =>
         {
-            entity.HasKey(e => e.CartId).HasName("PK__shopping__2EF52A2744F92366");
+            entity.HasKey(e => e.CartId).HasName("PK__shopping__2EF52A27C0AEA11C");
 
             entity.ToTable("shopping_cart");
 
@@ -325,7 +350,7 @@ public partial class EvMarketplaceContext : DbContext
 
         modelBuilder.Entity<Transaction>(entity =>
         {
-            entity.HasKey(e => e.TransactionId).HasName("PK__transact__85C600AF67B6E18E");
+            entity.HasKey(e => e.TransactionId).HasName("PK__transact__85C600AF35B65C94");
 
             entity.ToTable("transactions");
 
@@ -366,13 +391,13 @@ public partial class EvMarketplaceContext : DbContext
 
         modelBuilder.Entity<User>(entity =>
         {
-            entity.HasKey(e => e.UserId).HasName("PK__users__B9BE370F2CA3A35A");
+            entity.HasKey(e => e.UserId).HasName("PK__users__B9BE370F63DBF287");
 
             entity.ToTable("users");
 
-            entity.HasIndex(e => e.Email, "UQ__users__AB6E61641C9C4D5D").IsUnique();
+            entity.HasIndex(e => e.Email, "UQ__users__AB6E6164057B4E10").IsUnique();
 
-            entity.HasIndex(e => e.Phone, "UQ__users__B43B145FD0FB77C3").IsUnique();
+            entity.HasIndex(e => e.Phone, "UQ__users__B43B145FA6108D47").IsUnique();
 
             entity.Property(e => e.UserId)
                 .ValueGeneratedNever()
@@ -400,7 +425,7 @@ public partial class EvMarketplaceContext : DbContext
 
         modelBuilder.Entity<Vehicle>(entity =>
         {
-            entity.HasKey(e => e.VehicleId).HasName("PK__vehicles__F2947BC120319953");
+            entity.HasKey(e => e.VehicleId).HasName("PK__vehicles__F2947BC15F74059E");
 
             entity.ToTable("vehicles");
 
@@ -428,7 +453,7 @@ public partial class EvMarketplaceContext : DbContext
 
         modelBuilder.Entity<VehicleBrand>(entity =>
         {
-            entity.HasKey(e => e.BrandId).HasName("PK__vehicle___5E5A8E271388C4C0");
+            entity.HasKey(e => e.BrandId).HasName("PK__vehicle___5E5A8E271537C4B0");
 
             entity.ToTable("vehicle_brands");
 
@@ -442,7 +467,7 @@ public partial class EvMarketplaceContext : DbContext
 
         modelBuilder.Entity<Wallet>(entity =>
         {
-            entity.HasKey(e => e.WalletId).HasName("PK__wallets__0EE6F041AFFD1E43");
+            entity.HasKey(e => e.WalletId).HasName("PK__wallets__0EE6F041A58707AC");
 
             entity.ToTable("wallets");
 
