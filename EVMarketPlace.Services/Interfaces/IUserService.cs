@@ -10,8 +10,10 @@ namespace EVMarketPlace.Services.Interfaces
 {
     public interface IUserService
     {
-        Task<CreateAccountRespone> CreateAccount(CreateAccountRequest request);
+        Task<BaseRespone> CreateAccount(CreateAccountRequest request);
         Task<BaseRespone> LoginAsync(LoginRequest request);
-
+        Task<BaseRespone> VerifyOtpActiveAccountAsync(string email, string opt);
+        
+        Task<BaseRespone> ChangePasswordAsync(ChangePasswordRequest request);
     }
 }

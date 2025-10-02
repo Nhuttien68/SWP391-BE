@@ -14,7 +14,7 @@ namespace EVMarketPlace.API.Controllers
             _otpService = otpService;
             _emailSender = emailSender;
         }
-        [HttpPost("send-otp")]
+        [HttpPost("resend-otp")]
         public async Task<IActionResult> SendOtp([FromBody] string email)
         {
             var otp = _otpService.GenerateAndSaveOtp(email, 5);
@@ -25,15 +25,6 @@ namespace EVMarketPlace.API.Controllers
             return Ok(new { message = "OTP đã được gửi vào email." });
         }
 
-        [HttpPost("verify-otp")]
-        public IActionResult VerifyOtp([FromBody] VerifyOtpDto dto)
-        {
-            var success = _otpService.VerifyOtp(dto.Email, dto.Code);
-            if (!success)
-                return BadRequest(new { message = "OTP không hợp lệ hoặc đã hết hạn." });
-
-            return Ok(new { message = "Xác thực OTP thành công!" });
-        }
     }
 
     public class VerifyOtpDto

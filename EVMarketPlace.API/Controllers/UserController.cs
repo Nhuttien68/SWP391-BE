@@ -21,9 +21,19 @@ namespace EVMarketPlace.API.Controllers
         /// API dùng để đăng ký tài khoản người dùng mới.
         /// </summary>
         [HttpPost("register")]
-        public async Task<CreateAccountRespone> Create(CreateAccountRequest request)
+        public async Task<BaseRespone> Create(CreateAccountRequest request)
         {
             return await _userService.CreateAccount(request);
+        }
+        [HttpPost("verify-email-active-account")]
+        public async Task<BaseRespone> VerifyEmail(string email, string otp)
+        {
+            return await _userService.VerifyOtpActiveAccountAsync(email, otp);
+        }
+        [HttpPut("change-password")]
+        public async Task<BaseRespone> ResetPassword(ChangePasswordRequest request)
+        {
+            return await _userService.ChangePasswordAsync(request);
         }
         [HttpPost("login")]
         public async Task<BaseRespone> Login(LoginRequest request)

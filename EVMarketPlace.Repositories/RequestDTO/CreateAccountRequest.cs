@@ -14,4 +14,11 @@ namespace EVMarketPlace.Repositories.RequestDTO
         public string Password { get; set; } = null!;
         
     }
+    public class ChangePasswordRequest
+    {
+        public string Email { get; set; } 
+        public string Otp { get; set; }
+        public string NewPassWord { get; set; }
+    }
+
 }

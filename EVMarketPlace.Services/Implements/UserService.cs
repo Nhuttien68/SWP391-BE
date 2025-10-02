@@ -1,4 +1,5 @@
-﻿using EVMarketPlace.Repositories.Entity;
+﻿using Azure;
+using EVMarketPlace.Repositories.Entity;
 using EVMarketPlace.Repositories.Enum;
 using EVMarketPlace.Repositories.Repository;
 using EVMarketPlace.Repositories.RequestDTO;
@@ -6,6 +7,8 @@ using EVMarketPlace.Repositories.ResponseDTO;
 using EVMarketPlace.Repositories.Utils;
 using EVMarketPlace.Services.Interfaces;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Identity.UI.Services;
 using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
 using System;
@@ -15,6 +18,7 @@ using System.Linq;
 using System.Security.Claims;
 using System.Text;
 using System.Threading.Tasks;
+using static System.Net.WebRequestMethods;
 
 namespace EVMarketPlace.Services.Implements
 {
@@ -22,14 +26,50 @@ namespace EVMarketPlace.Services.Implements
     {
         private readonly IConfiguration _configuration;
         private readonly UserRepository _userRepository;
+        private readonly IOtpService _otpService;
+        private readonly IEmailSender _emailSender;
 
-        public UserService(UserRepository userRepository, IConfiguration configuration)
+        public UserService(UserRepository userRepository, IConfiguration configuration, IOtpService otpService,IEmailSender emailSender)
         {
             _configuration = configuration;
             _userRepository = userRepository;
+            _otpService = otpService;
+            _emailSender = emailSender;
         }
 
-        public async Task<CreateAccountRespone> CreateAccount(CreateAccountRequest request)
+        public async Task<BaseRespone> ChangePasswordAsync(ChangePasswordRequest request)
+        {
+            var user = _userRepository.GetByEmailAsync(request.Email).Result;
+            if (user == null)
+            {
+                return new BaseRespone
+                {
+                    Status = StatusCodes.Status404NotFound.ToString(),
+                    Message = "Không tìm thấy tài khoản với email này."
+                };
+            }
+
+            var isValidOtp = _otpService.VerifyOtp(request.Email, request.Otp);
+            if (!isValidOtp)
+            {
+                return new BaseRespone
+                {
+                    Status = StatusCodes.Status404NotFound.ToString(),
+                    Message = "OTP không hợp lệ hoặc đã hết hạn."
+                };
+            }
+
+            user.PasswordHash = HashPassword.HashPasswordSHA256(request.NewPassWord);
+            _userRepository.UpdateAsync(user).Wait();
+
+            return new BaseRespone
+            {
+                Status = StatusCodes.Status200OK.ToString(),
+                Message = "Đặt lại mật khẩu thành công."
+            };
+        }
+
+        public async Task<BaseRespone> CreateAccount(CreateAccountRequest request)
         {
             var existingUser = await _userRepository.GetByEmailAsync(request.Email);
             if (existingUser != null)
@@ -45,9 +85,12 @@ namespace EVMarketPlace.Services.Implements
                 PasswordHash = HashPassword.HashPasswordSHA256(request.Password),
                 Role = RoleEnum.USER.ToString(),
                 CreatedAt = DateTime.UtcNow,
-                IsActive = true
+                IsActive = false,
             };
-           await _userRepository.CreateAsync(user);// lưu vào DB
+            await _userRepository.CreateAsync(user);// lưu vào DB
+            var otp = _otpService.GenerateAndSaveOtp(user.Email);
+            var html = $"<p>Mã OTP của bạn là: <b>{otp}</b></p><p>Mã sẽ hết hạn sau 5 phút.</p>";
+            await _emailSender.SendEmailAsync(user.Email, "Mã OTP xác thực", html);
             var response = new CreateAccountRespone
             {
                 FullName = user.FullName,
@@ -56,7 +99,10 @@ namespace EVMarketPlace.Services.Implements
                 Role = user.Role,
                 IsActive = user.IsActive
             };
-            return response;
+            return new BaseRespone { Status = StatusCodes.Status201Created.ToString(),
+            Message= "Create accont successfully ",
+            Data = response
+            };
         }
 
         public async Task<BaseRespone> LoginAsync(LoginRequest request)
@@ -64,8 +110,22 @@ namespace EVMarketPlace.Services.Implements
             var account =  await _userRepository.GetAccountAsync(request);
             if (account == null)
             {
-                throw new InvalidOperationException("Đăng nhập thất bại. Vui lòng kiểm tra lại email và mật khẩu.");
+                return new BaseRespone
+                {
+                    Status = StatusCodes.Status404NotFound.ToString(),
+                    Message = "Đăng nhập thất bại. Vui lòng kiểm tra lại email và mật khẩu. ",
+                    Data = null
+                };
 
+            }
+            if (!account.IsActive)
+            {
+                return new BaseRespone
+                {
+                    Status = StatusCodes.Status405MethodNotAllowed.ToString(),
+                    Message = "Tài khoản chưa được kích hoạt. Vui lòng kiểm tra email để xác thực tài khoản. ",
+                    Data = null
+                };
             }
             var token = GenerateJSONWebToken(account);
             return new BaseRespone
@@ -80,12 +140,54 @@ namespace EVMarketPlace.Services.Implements
                     Token = token
                 }
             };
-
-
-
-
-
         }
+
+
+
+        public async Task<BaseRespone> VerifyOtpActiveAccountAsync(string email, string opt)
+        {
+            // Kiểm tra user tồn tại
+            var user = await _userRepository.GetByEmailAsync(email);
+            if (user == null)
+            {
+                return new BaseRespone
+                {
+                    Status = StatusCodes.Status404NotFound.ToString(),
+                    Message = "Không tìm thấy tài khoản với email này.",
+                    Data = null
+                };
+            }
+
+            // Kiểm tra OTP
+            var isValidOtp =  _otpService.VerifyOtp(email, opt);
+            if (!isValidOtp)
+            {
+                return new BaseRespone
+                {
+                    Status = StatusCodes.Status404NotFound.ToString(),
+                    Message = "OTP không hợp lệ hoặc đã hết hạn.",
+                    Data = null
+                };
+            }
+
+            // Nếu OTP hợp lệ -> kích hoạt tài khoản
+            user.IsActive = true;
+            await _userRepository.UpdateAsync(user);
+
+            return new BaseRespone
+            {
+                Status = StatusCodes.Status200OK.ToString(),
+                Message = "Xác minh OTP thành công. Tài khoản đã được kích hoạt.",
+                Data = new
+                {
+                    user.FullName,
+                    user.Email,
+                    user.Role,
+                    user.IsActive
+                }
+            };
+        }
+
         private string GenerateJSONWebToken(User account)
         {
             var securityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_configuration["Jwt:Key"])); // dùng để lấy key
