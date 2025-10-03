@@ -16,7 +16,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\EVMarketPlace.Repositories\EVMarketPlace.Repositories.csproj" />
     <ProjectReference Include="..\EVMarketPlace.Services\EVMarketPlace.Services.csproj" />
   </ItemGroup>
 
