@@ -1,4 +1,5 @@
-﻿using EVMarketPlace.Repositories.RequestDTO;
+﻿using EVMarketPlace.Repositories.Exception;
+using EVMarketPlace.Repositories.RequestDTO;
 using EVMarketPlace.Repositories.ResponseDTO;
 using EVMarketPlace.Services.Implements;
 using EVMarketPlace.Services.Interfaces;
@@ -23,9 +24,7 @@ namespace EVMarketPlace.API.Controllers
             _otpService = otpService;
             _emailSender = emailSender;
         }
-        /// <summary>
-        /// API dùng để đăng ký tài khoản người dùng mới.
-        /// </summary>
+
         [HttpPost("register")]
         public async Task<BaseRespone> Create(CreateAccountRequest request)
         {
@@ -49,6 +48,11 @@ namespace EVMarketPlace.API.Controllers
         [HttpPost("resend-otp")]
         public async Task<IActionResult> SendOtp([FromBody] string email)
         {
+            var user = await _userService.VerifyOtpActiveAccountAsync(email, "");
+            if (user == null)
+            {
+                throw new NotFoundException("Email không tồn tại.");
+            }
             var otp = _otpService.GenerateAndSaveOtp(email, 5);
 
             var html = $"<p>Mã OTP của bạn là: <b>{otp}</b></p><p>Mã sẽ hết hạn sau 5 phút.</p>";
