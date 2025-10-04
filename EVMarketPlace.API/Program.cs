@@ -2,13 +2,13 @@ using EVMarketPlace.Repositories.Options;
 using EVMarketPlace.Repositories.Repository;
 using EVMarketPlace.Services.Implements;
 using EVMarketPlace.Services.Interfaces;
+using EVMarketPlace.Repositories.Entity;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity.UI.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using System.Text;
-
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -26,6 +26,11 @@ builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<UserRepository>();
 
 
+// Configure DbContext 
+builder.Services.AddDbContext<EvMarketplaceContext>(opt =>
+    opt.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+
+builder.Services.AddScoped<IPostService, PostService>();
 
 
 // Configure PaginationOptions
