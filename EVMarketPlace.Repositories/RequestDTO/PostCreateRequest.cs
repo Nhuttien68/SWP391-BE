@@ -6,7 +6,6 @@ namespace EVMarketPlace.Repositories.RequestDTO.Posts
 
     public class PostCreateRequest
     {
-        [Required] public Guid UserId { get; set; }
 
         [Required, MinLength(3)]
         public string Type { get; set; } = null!;   // vehicle | battery

@@ -25,7 +25,9 @@ builder.Services.AddScoped<IEmailSender,EmailSender>();
 builder.Services.AddScoped<IOtpService, OtpService>();
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IWalletService, WalletService>();
+builder.Services.AddScoped<IPostService, PostService>();
 // Add resitory services
+builder.Services.AddScoped<PostRepository>();
 builder.Services.AddScoped<UserRepository>();
 builder.Services.AddScoped<WalletRepository>();
 builder.Services.AddScoped<UserUtility>();
@@ -33,9 +35,6 @@ builder.Services.AddHttpContextAccessor();
 
 
 
-// Configure PaginationOptions
-builder.Services.Configure<PaginationOptions>(
-    builder.Configuration.GetSection("Pagination"));
 
 builder.Services.AddSwaggerGen(option =>
 {
