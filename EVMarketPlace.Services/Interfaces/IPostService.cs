@@ -12,12 +12,12 @@ namespace EVMarketPlace.Services.Interfaces
         Task<PostDto?> GetByIdAsync(Guid postId, CancellationToken ct = default);
 
         // Lấy danh sách (có phân trang nhẹ).
-        Task<IReadOnlyList<PostDto>> GetPagedAsync(
-            int page = 1,
-            int pageSize = 10,
-            string? keyword = null,
-            string? type = null,
-            CancellationToken ct = default);
+        //Task<IReadOnlyList<PostDto>> GetPagedAsync(
+        //    int page = 1,
+        //    int pageSize = 10,
+        //    string? keyword = null,
+        //    string? type = null,
+        //    CancellationToken ct = default);
 
         Task<PostDto> UpdateAsync(PostUpdateRequest req, CancellationToken ct = default);
         Task<bool> DeleteAsync(Guid postId, CancellationToken ct = default);

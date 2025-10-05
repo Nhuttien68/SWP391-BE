@@ -19,7 +19,6 @@ namespace EVMarketPlace.Repositories.RequestDTO.Posts
         [Range(0, double.MaxValue)]
         public decimal Price { get; set; }
 
-        //Nếu null -> mặc định true (set trong service)
-        public bool? IsActive { get; set; }
+
     }
 }

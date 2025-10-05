@@ -24,13 +24,13 @@ builder.Services.AddScoped<IEmailSender,EmailSender>();
 builder.Services.AddScoped<IOtpService, OtpService>();
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<UserRepository>();
-
+builder.Services.AddScoped<PostRepository>();
+builder.Services.AddScoped<IPostService, PostService>();
 
 // Configure DbContext 
-builder.Services.AddDbContext<EvMarketplaceContext>(opt =>
-    opt.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+//builder.Services.AddDbContext<EvMarketplaceContext>(opt =>
+//    opt.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
-builder.Services.AddScoped<IPostService, PostService>();
 
 
 // Configure PaginationOptions

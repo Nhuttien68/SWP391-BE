@@ -15,17 +15,17 @@ namespace EVMarketPlace.API.Controllers
         public PostsController(IPostService svc) => _svc = svc;
 
         // Lấy danh sách Post
-        [HttpGet]
-        public async Task<IActionResult> GetAll(
-            [FromQuery] int page = 1,
-            [FromQuery] int pageSize = 10,
-            [FromQuery] string? keyword = null,
-            [FromQuery] string? type = null,
-            CancellationToken ct = default)
-        {
-            var data = await _svc.GetPagedAsync(page, pageSize, keyword, type, ct);
-            return Ok(data);
-        }
+        //[HttpGet]
+        //public async Task<IActionResult> GetAll(
+        //    [FromQuery] int page = 1,
+        //    [FromQuery] int pageSize = 10,
+        //    [FromQuery] string? keyword = null,
+        //    [FromQuery] string? type = null,
+        //    CancellationToken ct = default)
+        //{
+        //    var data = await _svc.GetPagedAsync(page, pageSize, keyword, type, ct);
+        //    return Ok(data);
+        //}
 
         //Lấy chi tiết Post theo id
         [HttpGet("{id:guid}")]
