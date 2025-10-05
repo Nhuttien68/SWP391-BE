@@ -1,6 +1,7 @@
 ﻿using Azure;
 using EVMarketPlace.Repositories.Entity;
 using EVMarketPlace.Repositories.Enum;
+using EVMarketPlace.Repositories.Exception;
 using EVMarketPlace.Repositories.Repository;
 using EVMarketPlace.Repositories.RequestDTO;
 using EVMarketPlace.Repositories.ResponseDTO;
@@ -42,21 +43,15 @@ namespace EVMarketPlace.Services.Implements
             var user = _userRepository.GetByEmailAsync(request.Email).Result;
             if (user == null)
             {
-                return new BaseRespone
-                {
-                    Status = StatusCodes.Status404NotFound.ToString(),
-                    Message = "Không tìm thấy tài khoản với email này."
-                };
+                throw new  NotFoundException("Không tìm thấy tài khoản với email này."); 
+                
             }
 
             var isValidOtp = _otpService.VerifyOtp(request.Email, request.Otp);
             if (!isValidOtp)
             {
-                return new BaseRespone
-                {
-                    Status = StatusCodes.Status404NotFound.ToString(),
-                    Message = "OTP không hợp lệ hoặc đã hết hạn."
-                };
+                throw new NotFoundException("OTP không hợp lệ hoặc đã hết hạn.");
+             
             }
 
             user.PasswordHash = HashPassword.HashPasswordSHA256(request.NewPassWord);
@@ -74,7 +69,8 @@ namespace EVMarketPlace.Services.Implements
             var existingUser = await _userRepository.GetByEmailAsync(request.Email);
             if (existingUser != null)
             {
-                throw new InvalidOperationException("Email đã được đăng ký!");
+               
+                throw new NotFoundException("Email đã được đăng ký!");
             }
             var user = new User
             {
@@ -110,22 +106,14 @@ namespace EVMarketPlace.Services.Implements
             var account =  await _userRepository.GetAccountAsync(request);
             if (account == null)
             {
-                return new BaseRespone
-                {
-                    Status = StatusCodes.Status404NotFound.ToString(),
-                    Message = "Đăng nhập thất bại. Vui lòng kiểm tra lại email và mật khẩu. ",
-                    Data = null
-                };
+                throw new NotFoundException("Đăng nhập thất bại. Vui lòng kiểm tra lại email và mật khẩu. ");
+               
 
             }
             if (!account.IsActive)
             {
-                return new BaseRespone
-                {
-                    Status = StatusCodes.Status405MethodNotAllowed.ToString(),
-                    Message = "Tài khoản chưa được kích hoạt. Vui lòng kiểm tra email để xác thực tài khoản. ",
-                    Data = null
-                };
+                throw new NotFoundException("Tài khoản chưa được kích hoạt. Vui lòng kiểm tra email để xác thực tài khoản. ");
+
             }
             var token = GenerateJSONWebToken(account);
             return new BaseRespone
@@ -150,24 +138,16 @@ namespace EVMarketPlace.Services.Implements
             var user = await _userRepository.GetByEmailAsync(email);
             if (user == null)
             {
-                return new BaseRespone
-                {
-                    Status = StatusCodes.Status404NotFound.ToString(),
-                    Message = "Không tìm thấy tài khoản với email này.",
-                    Data = null
-                };
+                throw new NotFoundException( "Không tìm thấy tài khoản với email này.");
+                
             }
 
             // Kiểm tra OTP
             var isValidOtp =  _otpService.VerifyOtp(email, opt);
             if (!isValidOtp)
             {
-                return new BaseRespone
-                {
-                    Status = StatusCodes.Status404NotFound.ToString(),
-                    Message = "OTP không hợp lệ hoặc đã hết hạn.",
-                    Data = null
-                };
+                throw new NotFoundException("OTP không hợp lệ hoặc đã hết hạn.");
+               
             }
 
             // Nếu OTP hợp lệ -> kích hoạt tài khoản

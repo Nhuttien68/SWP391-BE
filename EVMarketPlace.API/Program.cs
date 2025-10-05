@@ -1,5 +1,6 @@
 using EVMarketPlace.Repositories.Options;
 using EVMarketPlace.Repositories.Repository;
+using EVMarketPlace.Repositories.Utils;
 using EVMarketPlace.Services.Implements;
 using EVMarketPlace.Services.Interfaces;
 using EVMarketPlace.Repositories.Entity;
@@ -23,13 +24,12 @@ builder.Services.AddMemoryCache();
 builder.Services.AddScoped<IEmailSender,EmailSender>();
 builder.Services.AddScoped<IOtpService, OtpService>();
 builder.Services.AddScoped<IUserService, UserService>();
+builder.Services.AddScoped<IWalletService, WalletService>();
+// Add resitory services
 builder.Services.AddScoped<UserRepository>();
-builder.Services.AddScoped<PostRepository>();
-builder.Services.AddScoped<IPostService, PostService>();
-
-// Configure DbContext 
-//builder.Services.AddDbContext<EvMarketplaceContext>(opt =>
-//    opt.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+builder.Services.AddScoped<WalletRepository>();
+builder.Services.AddScoped<UserUtility>();
+builder.Services.AddHttpContextAccessor();
 
 
 
