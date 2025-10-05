@@ -1,5 +1,6 @@
 using EVMarketPlace.Repositories.Options;
 using EVMarketPlace.Repositories.Repository;
+using EVMarketPlace.Repositories.Utils;
 using EVMarketPlace.Services.Implements;
 using EVMarketPlace.Services.Interfaces;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -23,8 +24,12 @@ builder.Services.AddMemoryCache();
 builder.Services.AddScoped<IEmailSender,EmailSender>();
 builder.Services.AddScoped<IOtpService, OtpService>();
 builder.Services.AddScoped<IUserService, UserService>();
+builder.Services.AddScoped<IWalletService, WalletService>();
+// Add resitory services
 builder.Services.AddScoped<UserRepository>();
-
+builder.Services.AddScoped<WalletRepository>();
+builder.Services.AddScoped<UserUtility>();
+builder.Services.AddHttpContextAccessor();
 
 
 
