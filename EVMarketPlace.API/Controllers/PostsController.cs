@@ -1,5 +1,6 @@
 ﻿using EVMarketPlace.Repositories.RequestDTO.Posts;
 using EVMarketPlace.Services.Interfaces;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace EVMarketPlace.API.Controllers
@@ -37,6 +38,7 @@ namespace EVMarketPlace.API.Controllers
         }
 
         // Tạo mới Post.
+        [Authorize] // Chỉ người dùng đã xác thực mới có thể tạo
         [HttpPost]
         public async Task<IActionResult> Create([FromBody] PostCreateRequest req, CancellationToken ct = default)
         {
@@ -46,7 +48,7 @@ namespace EVMarketPlace.API.Controllers
         }
 
         // Cập nhật Post 
-
+        [Authorize] // Chỉ người dùng đã xác thực mới có thể cập nhật
         [HttpPut("{id:guid}")]
         public async Task<IActionResult> Update([FromRoute] Guid id, [FromBody] PostUpdateRequest req, CancellationToken ct = default)
         {
@@ -56,18 +58,32 @@ namespace EVMarketPlace.API.Controllers
                 var updated = await _PostService.UpdateAsync(req, ct);
                 return Ok(updated);
             }
-            catch (KeyNotFoundException)
+            catch (KeyNotFoundException)// nếu Post không tồn tại
+
             {
                 return NotFound();
+            }
+            
+            catch (UnauthorizedAccessException) // nếu không phải chủ sở hữu
+            {
+                return Forbid(); // 403 Forbidden
             }
         }
 
         // Xóa Post theo id
+        [Authorize] // Chỉ người dùng đã xác thực mới có thể xóa
         [HttpDelete("{id:guid}")]
         public async Task<IActionResult> Delete([FromRoute] Guid id, CancellationToken ct = default)
         {
-            var ok = await _PostService.DeleteAsync(id, ct);
-            return ok ? Ok(new { deleted = true }) : NotFound();
+            try
+            {
+                var ok = await _PostService.DeleteAsync(id, ct);
+                return ok ? Ok(new { deleted = true }) : NotFound();
+            }
+            catch (UnauthorizedAccessException) // nếu không phải chủ sở hữu
+            {
+                return Forbid(); // 403 Forbidden
+            }
         }
     }
 }
