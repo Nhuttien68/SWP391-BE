@@ -60,5 +60,11 @@ namespace EVMarketPlace.API.Controllers
 
             return Ok(new { message = "OTP đã được gửi vào email." });
         }
+
+        [HttpPost("forgot-password")]
+        public async Task<BaseRespone> ForgotPassword([FromBody] string email)
+        {
+            return await _userService.ForgotPasswordAsync(email);
+        }
     }
 }

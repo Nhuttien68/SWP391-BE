@@ -106,14 +106,21 @@ namespace EVMarketPlace.Services.Implements
             var account =  await _userRepository.GetAccountAsync(request);
             if (account == null)
             {
-                throw new NotFoundException("Đăng nhập thất bại. Vui lòng kiểm tra lại email và mật khẩu. ");
-               
-
+                return new BaseRespone
+                {
+                    Status = StatusCodes.Status400BadRequest.ToString(),
+                    Message = "Đăng nhập thất bại. Vui lòng kiểm tra lại email và mật khẩu.",
+                    Data = null
+                };
             }
             if (!account.IsActive)
             {
-                throw new NotFoundException("Tài khoản chưa được kích hoạt. Vui lòng kiểm tra email để xác thực tài khoản. ");
-
+                return new BaseRespone
+                {
+                    Status = StatusCodes.Status400BadRequest.ToString(),
+                    Message = "Tài khoản chưa được kích hoạt. Vui lòng kiểm tra email để xác thực tài khoản.",
+                    Data = null
+                };
             }
             var token = GenerateJSONWebToken(account);
             return new BaseRespone
@@ -189,6 +196,30 @@ namespace EVMarketPlace.Services.Implements
             var tokenString = new JwtSecurityTokenHandler().WriteToken(token);
 
             return tokenString;
+        }
+
+        public async Task<BaseRespone> ForgotPasswordAsync(string email)
+        {
+            var user = await _userRepository.GetByEmailAsync(email);
+            if (user == null)
+            {
+                return new BaseRespone
+                {
+                    Status = StatusCodes.Status404NotFound.ToString(),
+                    Message = "Không tìm thấy tài khoản với email này."
+                };
+            }
+
+            var otp = _otpService.GenerateAndSaveOtp(email, 5);
+
+            var html = $"<p>Mã OTP để đặt lại mật khẩu: <b>{otp}</b></p><p>Mã sẽ hết hạn sau 5 phút.</p>";
+            await _emailSender.SendEmailAsync(email, "Đặt lại mật khẩu", html);
+
+            return new BaseRespone
+            {
+                Status = StatusCodes.Status200OK.ToString(),
+                Message = "Mã OTP đã được gửi đến email của bạn."
+            };
         }
     }
 }

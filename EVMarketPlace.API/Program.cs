@@ -80,7 +80,7 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
         };
     });
 
-// Th�m CORS
+// Th�m CORS
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowAll", builder =>
@@ -100,10 +100,16 @@ if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
-    app.UseDeveloperExceptionPage();
 }
 
+// Add Global Exception Handler
+app.UseMiddleware<EVMarketPlace.API.Middleware.GlobalException>();
+
 app.UseHttpsRedirection();
+
+// Áp dụng CORS policy
+app.UseCors("AllowAll");
+
 app.UseAuthentication();
 app.UseAuthorization();
 
