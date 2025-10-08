@@ -46,19 +46,37 @@ namespace EVMarketPlace.API.Controllers
             return await _userService.LoginAsync(request);
         }
         [HttpPost("resend-otp")]
-        public async Task<IActionResult> SendOtp([FromBody] string email)
+        public async Task<IActionResult> SendOtp([FromBody] ResendOtpRequest request)
         {
-            var user = await _userService.VerifyOtpActiveAccountAsync(email, "");
-            if (user == null)
+            try
             {
-                throw new NotFoundException("Email không tồn tại.");
+                var result = await _userService.ResendOtpAsync(request.Email);
+                
+                if (result.Status == "200")
+                {
+                    return Ok(result);
+                }
+                else
+                {
+                    return BadRequest(result);
+                }
             }
-            var otp = _otpService.GenerateAndSaveOtp(email, 5);
-
-            var html = $"<p>Mã OTP của bạn là: <b>{otp}</b></p><p>Mã sẽ hết hạn sau 5 phút.</p>";
-            await _emailSender.SendEmailAsync(email, "Mã OTP xác thực", html);
-
-            return Ok(new { message = "OTP đã được gửi vào email." });
+            catch (NotFoundException ex)
+            {
+                return BadRequest(new BaseRespone
+                {
+                    Status = "404",
+                    Message = ex.Message
+                });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new BaseRespone
+                {
+                    Status = "500",
+                    Message = "Có lỗi xảy ra khi gửi OTP: " + ex.Message
+                });
+            }
         }
 
         [HttpPost("forgot-password")]

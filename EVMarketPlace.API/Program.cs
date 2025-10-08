@@ -3,13 +3,13 @@ using EVMarketPlace.Repositories.Repository;
 using EVMarketPlace.Repositories.Utils;
 using EVMarketPlace.Services.Implements;
 using EVMarketPlace.Services.Interfaces;
+using EVMarketPlace.Repositories.Entity;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity.UI.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using System.Text;
-
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -25,7 +25,9 @@ builder.Services.AddScoped<IEmailSender,EmailSender>();
 builder.Services.AddScoped<IOtpService, OtpService>();
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IWalletService, WalletService>();
+builder.Services.AddScoped<IPostService, PostService>();
 // Add resitory services
+builder.Services.AddScoped<PostRepository>();
 builder.Services.AddScoped<UserRepository>();
 builder.Services.AddScoped<WalletRepository>();
 builder.Services.AddScoped<UserUtility>();
@@ -33,9 +35,6 @@ builder.Services.AddHttpContextAccessor();
 
 
 
-// Configure PaginationOptions
-builder.Services.Configure<PaginationOptions>(
-    builder.Configuration.GetSection("Pagination"));
 
 builder.Services.AddSwaggerGen(option =>
 {

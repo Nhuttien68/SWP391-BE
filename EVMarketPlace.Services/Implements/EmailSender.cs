@@ -5,7 +5,6 @@ using MailKit.Security;
 using Microsoft.AspNetCore.Identity.UI.Services;
 using Microsoft.Extensions.Configuration;
 using MimeKit;
-using MimeKit;
 using System;
 using System.Collections.Generic;
 using System.Linq;
