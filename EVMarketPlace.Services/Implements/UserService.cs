@@ -1,4 +1,4 @@
-ï»¿using Azure;
+using Azure;
 using EVMarketPlace.Repositories.Entity;
 using EVMarketPlace.Repositories.Enum;
 using EVMarketPlace.Repositories.Exception;
@@ -43,14 +43,14 @@ namespace EVMarketPlace.Services.Implements
             var user = _userRepository.GetByEmailAsync(request.Email).Result;
             if (user == null)
             {
-                throw new  NotFoundException("KhÃ´ng tÃ¬m tháº¥y tÃ i khoáº£n vá»›i email nÃ y."); 
+                throw new  NotFoundException("Không t?m th?y tài kho?n v?i email này."); 
                 
             }
 
             var isValidOtp = _otpService.VerifyOtp(request.Email, request.Otp);
             if (!isValidOtp)
             {
-                throw new NotFoundException("OTP khÃ´ng há»£p lá»‡ hoáº·c Ä‘Ã£ háº¿t háº¡n.");
+                throw new NotFoundException("OTP không h?p l? ho?c ğ? h?t h?n.");
              
             }
 
@@ -60,7 +60,7 @@ namespace EVMarketPlace.Services.Implements
             return new BaseRespone
             {
                 Status = StatusCodes.Status200OK.ToString(),
-                Message = "Äáº·t láº¡i máº­t kháº©u thÃ nh cÃ´ng."
+                Message = "Ğ?t l?i m?t kh?u thành công."
             };
         }
 
@@ -70,7 +70,7 @@ namespace EVMarketPlace.Services.Implements
             if (existingUser != null)
             {
                
-                throw new NotFoundException("Email Ä‘Ã£ Ä‘Æ°á»£c Ä‘Äƒng kÃ½!");
+                throw new NotFoundException("Email ğ? ğı?c ğãng k?!");
             }
             var user = new User
             {
@@ -83,10 +83,10 @@ namespace EVMarketPlace.Services.Implements
                 CreatedAt = DateTime.UtcNow,
                 IsActive = false,
             };
-            await _userRepository.CreateAsync(user);// lÆ°u vÃ o DB
+            await _userRepository.CreateAsync(user);// lıu vào DB
             var otp = _otpService.GenerateAndSaveOtp(user.Email);
-            var html = $"<p>MÃ£ OTP cá»§a báº¡n lÃ : <b>{otp}</b></p><p>MÃ£ sáº½ háº¿t háº¡n sau 5 phÃºt.</p>";
-            await _emailSender.SendEmailAsync(user.Email, "MÃ£ OTP xÃ¡c thá»±c", html);
+            var html = $"<p>M? OTP c?a b?n là: <b>{otp}</b></p><p>M? s? h?t h?n sau 5 phút.</p>";
+            await _emailSender.SendEmailAsync(user.Email, "M? OTP xác th?c", html);
             var response = new CreateAccountRespone
             {
                 FullName = user.FullName,
@@ -109,30 +109,27 @@ namespace EVMarketPlace.Services.Implements
                 return new BaseRespone
                 {
                     Status = StatusCodes.Status400BadRequest.ToString(),
-                    Message = "ÄÄƒng nháº­p tháº¥t báº¡i. Vui lÃ²ng kiá»ƒm tra láº¡i email vÃ  máº­t kháº©u.",
+                    Message = "Ğãng nh?p th?t b?i. Vui l?ng ki?m tra l?i email và m?t kh?u.",
                     Data = null
                 };
             }
-            if (!account.IsActive)
-            {
-                return new BaseRespone
-                {
-                    Status = StatusCodes.Status400BadRequest.ToString(),
-                    Message = "TÃ i khoáº£n chÆ°a Ä‘Æ°á»£c kÃ­ch hoáº¡t. Vui lÃ²ng kiá»ƒm tra email Ä‘á»ƒ xÃ¡c thá»±c tÃ i khoáº£n.",
-                    Data = null
-                };
-            }
+            
             var token = GenerateJSONWebToken(account);
+            
+            // Cho phép ğãng nh?p ngay c? khi chıa kích ho?t
+            // Nhıng tr? v? thông tin ğ?c bi?t ğ? frontend x? l?
             return new BaseRespone
             {
                 Status = StatusCodes.Status200OK.ToString(),
-                Message = "Login successfully",
+                Message = account.IsActive ? "Login successfully" : "Login successfully but account not activated",
                 Data = new LoginResponse
                 {
                     AccountId = account.UserId,
                     FullName = account.FullName,
                     Email = account.Email,
-                    Token = token
+                    Phone = account.Phone,
+                    Token = token,
+                    IsActive = account.IsActive
                 }
             };
         }
@@ -141,30 +138,30 @@ namespace EVMarketPlace.Services.Implements
 
         public async Task<BaseRespone> VerifyOtpActiveAccountAsync(string email, string opt)
         {
-            // Kiá»ƒm tra user tá»“n táº¡i
+            // Ki?m tra user t?n t?i
             var user = await _userRepository.GetByEmailAsync(email);
             if (user == null)
             {
-                throw new NotFoundException( "KhÃ´ng tÃ¬m tháº¥y tÃ i khoáº£n vá»›i email nÃ y.");
+                throw new NotFoundException( "Không t?m th?y tài kho?n v?i email này.");
                 
             }
 
-            // Kiá»ƒm tra OTP
+            // Ki?m tra OTP
             var isValidOtp =  _otpService.VerifyOtp(email, opt);
             if (!isValidOtp)
             {
-                throw new NotFoundException("OTP khÃ´ng há»£p lá»‡ hoáº·c Ä‘Ã£ háº¿t háº¡n.");
+                throw new NotFoundException("OTP không h?p l? ho?c ğ? h?t h?n.");
                
             }
 
-            // Náº¿u OTP há»£p lá»‡ -> kÃ­ch hoáº¡t tÃ i khoáº£n
+            // N?u OTP h?p l? -> kích ho?t tài kho?n
             user.IsActive = true;
             await _userRepository.UpdateAsync(user);
 
             return new BaseRespone
             {
                 Status = StatusCodes.Status200OK.ToString(),
-                Message = "XÃ¡c minh OTP thÃ nh cÃ´ng. TÃ i khoáº£n Ä‘Ã£ Ä‘Æ°á»£c kÃ­ch hoáº¡t.",
+                Message = "Xác minh OTP thành công. Tài kho?n ğ? ğı?c kích ho?t.",
                 Data = new
                 {
                     user.FullName,
@@ -177,8 +174,8 @@ namespace EVMarketPlace.Services.Implements
 
         private string GenerateJSONWebToken(User account)
         {
-            var securityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_configuration["Jwt:Key"])); // dÃ¹ng Ä‘á»ƒ láº¥y key
-            var credentials = new SigningCredentials(securityKey, SecurityAlgorithms.HmacSha256); //mÃ£ hÃ³a 
+            var securityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_configuration["Jwt:Key"])); // dùng ğ? l?y key
+            var credentials = new SigningCredentials(securityKey, SecurityAlgorithms.HmacSha256); //m? hóa 
 
             var token = new JwtSecurityToken(_configuration["Jwt:Issuer"]
                     , _configuration["Jwt:Audience"]
@@ -188,7 +185,7 @@ namespace EVMarketPlace.Services.Implements
                    new Claim(JwtRegisteredClaimNames.NameId, account.UserId.ToString()),
                    new (ClaimTypes.Role, account.Role.ToString())
                     },
-                    expires: DateTime.Now.AddMinutes(120),// set thá»i gian háº¿t háº¡n
+                    expires: DateTime.Now.AddMinutes(120),// set th?i gian h?t h?n
                     signingCredentials: credentials
                     );
 
@@ -206,19 +203,50 @@ namespace EVMarketPlace.Services.Implements
                 return new BaseRespone
                 {
                     Status = StatusCodes.Status404NotFound.ToString(),
-                    Message = "KhÃ´ng tÃ¬m tháº¥y tÃ i khoáº£n vá»›i email nÃ y."
+                    Message = "Không t?m th?y tài kho?n v?i email này."
                 };
             }
 
             var otp = _otpService.GenerateAndSaveOtp(email, 5);
 
-            var html = $"<p>MÃ£ OTP Ä‘á»ƒ Ä‘áº·t láº¡i máº­t kháº©u: <b>{otp}</b></p><p>MÃ£ sáº½ háº¿t háº¡n sau 5 phÃºt.</p>";
-            await _emailSender.SendEmailAsync(email, "Äáº·t láº¡i máº­t kháº©u", html);
+            var html = $"<p>M? OTP ğ? ğ?t l?i m?t kh?u: <b>{otp}</b></p><p>M? s? h?t h?n sau 5 phút.</p>";
+            await _emailSender.SendEmailAsync(email, "Ğ?t l?i m?t kh?u", html);
 
             return new BaseRespone
             {
                 Status = StatusCodes.Status200OK.ToString(),
-                Message = "MÃ£ OTP Ä‘Ã£ Ä‘Æ°á»£c gá»­i Ä‘áº¿n email cá»§a báº¡n."
+                Message = "M? OTP ğ? ğı?c g?i ğ?n email c?a b?n."
+            };
+        }
+
+        public async Task<BaseRespone> ResendOtpAsync(string email)
+        {
+            // Ki?m tra user t?n t?i
+            var user = await _userRepository.GetByEmailAsync(email);
+            if (user == null)
+            {
+                throw new NotFoundException("Email không t?n t?i trong h? th?ng.");
+            }
+
+            // Ki?m tra user ğ? active chıa
+            if (user.IsActive)
+            {
+                return new BaseRespone
+                {
+                    Status = StatusCodes.Status400BadRequest.ToString(),
+                    Message = "Tài kho?n ğ? ğı?c kích ho?t."
+                };
+            }
+
+            // T?o và g?i OTP m?i
+            var otp = _otpService.GenerateAndSaveOtp(email, 5);
+            var html = $"<p>M? OTP ğ? kích ho?t tài kho?n: <b>{otp}</b></p><p>M? s? h?t h?n sau 5 phút.</p>";
+            await _emailSender.SendEmailAsync(email, "M? OTP kích ho?t tài kho?n", html);
+
+            return new BaseRespone
+            {
+                Status = StatusCodes.Status200OK.ToString(),
+                Message = "M? OTP ğ? ğı?c g?i ğ?n email c?a b?n."
             };
         }
     }

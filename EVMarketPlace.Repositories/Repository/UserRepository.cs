@@ -15,8 +15,7 @@ namespace EVMarketPlace.Repositories.Repository
         public async Task<User> GetAccountAsync(LoginRequest loginRequest)
         {
             return await _context.Users.FirstOrDefaultAsync(a => a.Email == loginRequest.Email &&
-            a.PasswordHash.Equals(HashPassword.HashPasswordSHA256(loginRequest.Password)) &&
-            a.IsActive == true );
+            a.PasswordHash.Equals(HashPassword.HashPasswordSHA256(loginRequest.Password)));
         }
         public async Task<User?> GetByEmailAsync(string email)
         {
