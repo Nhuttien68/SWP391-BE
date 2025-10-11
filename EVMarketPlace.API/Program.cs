@@ -1,4 +1,4 @@
-using EVMarketPlace.Repositories.Options;
+﻿using EVMarketPlace.Repositories.Options;
 using EVMarketPlace.Repositories.Repository;
 using EVMarketPlace.Repositories.Utils;
 using EVMarketPlace.Services.Implements;
@@ -10,6 +10,9 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using System.Text;
+using FirebaseAdmin;
+using Google.Apis.Auth.OAuth2;
+
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -32,6 +35,8 @@ builder.Services.AddScoped<UserRepository>();
 builder.Services.AddScoped<WalletRepository>();
 builder.Services.AddScoped<UserUtility>();
 builder.Services.AddHttpContextAccessor();
+// Add Firebase Storage Service
+builder.Services.AddScoped<FirebaseStorageService>();
 
 
 
@@ -79,7 +84,7 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
         };
     });
 
-// Th�m CORS
+// Thêm CORS
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowAll", builder =>
@@ -102,10 +107,20 @@ if (app.Environment.IsDevelopment())
     app.UseDeveloperExceptionPage();
 }
 
+// khởi tạo Firebase Admin SDK
+var credsPath = Path.Combine(builder.Environment.ContentRootPath, "firebase-adminsdk.json");
+if (FirebaseApp.DefaultInstance == null)
+{
+    FirebaseApp.Create(new AppOptions
+    {
+        Credential = GoogleCredential.FromFile(credsPath),
+    });
+}
+
+
+app.UseCors("AllowAll"); // Sử dụng CORS để cho phép tất cả các nguồn.
 app.UseHttpsRedirection();
 app.UseAuthentication();
 app.UseAuthorization();
-
 app.MapControllers();
-
 app.Run();

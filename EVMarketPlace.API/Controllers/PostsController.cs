@@ -15,7 +15,7 @@ namespace EVMarketPlace.API.Controllers
         private readonly IPostService _PostService;
         public PostsController(IPostService postService)
         {
-            _PostService = postService; 
+            _PostService = postService;
         }
 
         // Lấy danh sách Post
@@ -43,7 +43,7 @@ namespace EVMarketPlace.API.Controllers
         public async Task<IActionResult> Create([FromBody] PostCreateRequest req, CancellationToken ct = default)
         {
             if (!ModelState.IsValid) return ValidationProblem(ModelState);
-            var created = await _PostService.CreateAsync(req, ct);
+            var created = await _PostService.CreateAsync(req, null, ct);
             return CreatedAtAction(nameof(GetById), new { id = created.PostId }, created);
         }
 
@@ -63,7 +63,7 @@ namespace EVMarketPlace.API.Controllers
             {
                 return NotFound();
             }
-            
+
             catch (UnauthorizedAccessException) // nếu không phải chủ sở hữu
             {
                 return Forbid(); // 403 Forbidden
@@ -85,5 +85,20 @@ namespace EVMarketPlace.API.Controllers
                 return Forbid(); // 403 Forbidden
             }
         }
+
+
+        // Tạo mới Post với hình ảnh (multipart/form-data)
+        [Authorize]
+        [HttpPost("form")]
+        [Consumes("multipart/form-data")]
+        [RequestSizeLimit(10_000_000)] // Giới hạn kích thước request (10MB)
+        public async Task<IActionResult> CreateWithImage([FromForm] PostCreateRequest req, IFormFile? image, CancellationToken ct = default)
+        {
+            if (!ModelState.IsValid) return ValidationProblem(ModelState);
+            var created = await _PostService.CreateAsync(req, image, ct);
+            return CreatedAtAction(nameof(GetById), new { id = created.PostId }, created);
+        }
+
+
     }
 }
