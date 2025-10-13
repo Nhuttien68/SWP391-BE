@@ -45,39 +45,39 @@ namespace EVMarketPlace.API.Controllers
         {
             return await _userService.LoginAsync(request);
         }
-        [HttpPost("resend-otp")]
-        public async Task<IActionResult> SendOtp([FromBody] ResendOtpRequest request)
-        {
-            try
-            {
-                var result = await _userService.ResendOtpAsync(request.Email);
+        //[HttpPost("resend-otp")]
+        //public async Task<IActionResult> SendOtp([FromBody] ResendOtpRequest request)
+        //{
+        //    try
+        //    {
+        //        var result = await _userService.ResendOtpAsync(request.Email);
                 
-                if (result.Status == "200")
-                {
-                    return Ok(result);
-                }
-                else
-                {
-                    return BadRequest(result);
-                }
-            }
-            catch (NotFoundException ex)
-            {
-                return BadRequest(new BaseRespone
-                {
-                    Status = "404",
-                    Message = ex.Message
-                });
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(new BaseRespone
-                {
-                    Status = "500",
-                    Message = "Có lỗi xảy ra khi gửi OTP: " + ex.Message
-                });
-            }
-        }
+        //        if (result.Status == "200")
+        //        {
+        //            return Ok(result);
+        //        }
+        //        else
+        //        {
+        //            return BadRequest(result);
+        //        }
+        //    }
+        //    catch (NotFoundException ex)
+        //    {
+        //        return BadRequest(new BaseRespone
+        //        {
+        //            Status = "404",
+        //            Message = ex.Message
+        //        });
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        return BadRequest(new BaseRespone
+        //        {
+        //            Status = "500",
+        //            Message = "Có lỗi xảy ra khi gửi OTP: " + ex.Message
+        //        });
+        //    }
+        //}
 
         [HttpPost("forgot-password")]
         public async Task<BaseRespone> ForgotPassword([FromBody] string email)
