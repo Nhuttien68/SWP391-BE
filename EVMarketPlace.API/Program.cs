@@ -1,4 +1,4 @@
-using EVMarketPlace.Repositories.Options;
+﻿using EVMarketPlace.Repositories.Options;
 using EVMarketPlace.Repositories.Repository;
 using EVMarketPlace.Repositories.Utils;
 using EVMarketPlace.Services.Implements;
@@ -79,7 +79,7 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
         };
     });
 
-// Th�m CORS
+// Thï¿½m CORS
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowAll", builder =>
@@ -106,7 +106,7 @@ app.UseMiddleware<EVMarketPlace.API.Middleware.GlobalException>();
 
 app.UseHttpsRedirection();
 
-// Áp dụng CORS policy
+// Ăp dá»¥ng CORS policy
 app.UseCors("AllowAll");
 
 app.UseAuthentication();
