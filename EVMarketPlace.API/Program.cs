@@ -26,7 +26,11 @@ builder.Services.AddScoped<IOtpService, OtpService>();
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IWalletService, WalletService>();
 builder.Services.AddScoped<IPostService, PostService>();
+builder.Services.AddScoped<IBatteryBrandService, BatteryBrandService>();
+builder.Services.AddScoped<IVehicleBrandService, VehicleBrandService>();
 // Add resitory services
+builder.Services.AddScoped<VehilceBrandRepository>();
+builder.Services.AddScoped<BatteryBrandRepository>();
 builder.Services.AddScoped<PostRepository>();
 builder.Services.AddScoped<UserRepository>();
 builder.Services.AddScoped<WalletRepository>();
