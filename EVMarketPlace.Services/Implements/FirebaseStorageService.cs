@@ -9,7 +9,9 @@ namespace EVMarketPlace.Services.Implements
 {
     public class FirebaseStorageService
     {
-        private const string BucketName = "ev-marketplace.appspot.com";
+        // private const string BucketName = "ev-marketplace.appspot.com";
+        private const string BucketName = ("ev-marketplace-9b1f7.firebasestorage.app");
+
         private readonly string _credsPath;
 
         public FirebaseStorageService(IWebHostEnvironment env)
@@ -20,25 +22,31 @@ namespace EVMarketPlace.Services.Implements
 
         public async Task<string> UploadFileAsync(Stream fileStream, string fileName, string contentType, CancellationToken ct = default)
         {
-            // Lấy access token từ service account
-            var credential = GoogleCredential.FromFile(_credsPath)
-                .CreateScoped("https://www.googleapis.com/auth/devstorage.read_write");
+            try
+            {
+                // Lấy access token từ service account
+                var credential = GoogleCredential.FromFile(_credsPath)
+                    .CreateScoped("https://www.googleapis.com/auth/devstorage.read_write");
 
-            var accessToken = await credential.UnderlyingCredential.GetAccessTokenForRequestAsync();
+                var accessToken = await credential.UnderlyingCredential.GetAccessTokenForRequestAsync();
 
-            var task = new FirebaseStorage(
-                            BucketName,
-                            new FirebaseStorageOptions
-                            {
-                                ThrowOnCancel = true,
-                                // 👇 cấp token cho FirebaseStorage.net
-                                AuthTokenAsyncFactory = () => Task.FromResult(accessToken)
-                            })
-                        .Child("images")
-                        .Child(fileName)
-                        .PutAsync(fileStream, ct, contentType);
+                var task = new FirebaseStorage(
+                                BucketName,
+                                new FirebaseStorageOptions
+                                {
+                                    ThrowOnCancel = true,
+                                    // 👇 cấp token cho FirebaseStorage.net
+                                    AuthTokenAsyncFactory = () => Task.FromResult(accessToken)
+                                })
+                            .Child("images")
+                            .Child(fileName)
+                            .PutAsync(fileStream, ct, contentType);
 
-            return await task; // trả về download URL
+                return await task; // trả về download URL
+            } catch(Exception ex) {                 // Xử lý lỗi upload
+                throw new Exception("Failed to upload file to Firebase Storage", ex);
+            }
+
         }
     }
 }
