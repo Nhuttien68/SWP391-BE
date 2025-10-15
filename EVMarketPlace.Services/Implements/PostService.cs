@@ -5,20 +5,24 @@ using Microsoft.EntityFrameworkCore;
 using EVMarketPlace.Repositories.Entity;
 using EVMarketPlace.Repositories.Repository;
 using EVMarketPlace.Repositories.Utils;
+using Microsoft.AspNetCore.Http;
 
 namespace EVMarketPlace.Services.Implements
 {
 
 
-    public class PostService : IPostService 
+    public class PostService : IPostService
     {
         private readonly PostRepository _postRepository;
         private readonly UserUtility _userUtility;
+        private readonly FirebaseStorageService _firebaseStorage;
         private static readonly HashSet<String> _types = new(StringComparer.OrdinalIgnoreCase) { "vehicle", "battery" };
-        public PostService( PostRepository postRepository , UserUtility userUtility )
+
+        public PostService( PostRepository postRepository , UserUtility userUtility, FirebaseStorageService firebaseStorage)
         {
             _postRepository = postRepository;
             _userUtility = userUtility;
+            _firebaseStorage = firebaseStorage;
         }
 
 
@@ -43,8 +47,15 @@ namespace EVMarketPlace.Services.Implements
 
         // Tạo mới Post
         // CancellationToken để hủy tác vụ khi client ngắt request (ví dụ: đóng tab, timeout) giúp tiết kiệm tài nguyên.
-        public async Task<PostDto> CreateAsync(PostCreateRequest req, CancellationToken ct = default) 
+        public async Task<PostDto> CreateAsync(PostCreateRequest req, IFormFile? image, CancellationToken ct = default) 
         {
+            string? imageUrl = null;
+            if (image != null)
+            {
+                using var stream = image.OpenReadStream();
+                imageUrl = await _firebaseStorage.UploadFileAsync(stream, image.FileName, image.ContentType);
+            }
+
             var userid = _userUtility.GetUserIdFromToken(); // get userId from token
             ValidateCreateRequest(req); // validate request
             if (userid == Guid.Empty)
@@ -59,11 +70,22 @@ namespace EVMarketPlace.Services.Implements
                 Title = req.Title,
                 Description = req.Description,
                 Price = req.Price,
-                IsActive =  false,  
-                CreatedAt = DateTime.UtcNow         // dùng UTC cho đồng nhất
+                IsActive = false,
+                CreatedAt = DateTime.UtcNow,         // dùng UTC cho đồng nhất
             };
+            // nếu có ảnh thì thêm vào PostImages, vì 1 post có thể có nhiều ảnh
+            if (!string.IsNullOrEmpty(imageUrl))
+            {
+                post.PostImages.Add( new PostImage
+                {
+                    ImageId = Guid.NewGuid(),
+                    PostId = post.PostId,
+                    ImageUrl = imageUrl,
+                });
+            }
 
-            await _postRepository.CreateAsync(post);
+            await _postRepository.CreateAsync(post); // Thêm vào DB
+
             return ToDto(post);
         }
 
