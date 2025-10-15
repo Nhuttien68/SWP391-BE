@@ -104,7 +104,6 @@ if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
-    app.UseDeveloperExceptionPage();
 }
 
 // khởi tạo Firebase Admin SDK
@@ -119,7 +118,14 @@ if (FirebaseApp.DefaultInstance == null)
 
 
 app.UseCors("AllowAll"); // Sử dụng CORS để cho phép tất cả các nguồn.
+// Add Global Exception Handler
+app.UseMiddleware<EVMarketPlace.API.Middleware.GlobalException>();
+
 app.UseHttpsRedirection();
+
+// Áp dụng CORS policy
+app.UseCors("AllowAll");
+
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();

@@ -14,6 +14,10 @@ namespace EVMarketPlace.Repositories.ResponseDTO
 
         public string Email { get; set; } = null!;
 
+        public string Phone { get; set; } = null!;
+
         public string Token { get; set; } = null!;
+
+        public bool IsActive { get; set; }
     }
 }

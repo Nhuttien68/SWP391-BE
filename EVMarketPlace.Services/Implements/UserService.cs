@@ -1,4 +1,4 @@
-Ôªøusing Azure;
+using Azure;
 using EVMarketPlace.Repositories.Entity;
 using EVMarketPlace.Repositories.Enum;
 using EVMarketPlace.Repositories.Exception;
@@ -43,14 +43,14 @@ namespace EVMarketPlace.Services.Implements
             var user = _userRepository.GetByEmailAsync(request.Email).Result;
             if (user == null)
             {
-                throw new  NotFoundException("Kh√¥ng t√¨m th·∫•y t√†i kho·∫£n v·ªõi email n√†y."); 
+                throw new  NotFoundException("KhÙng t?m th?y t‡i kho?n v?i email n‡y."); 
                 
             }
 
             var isValidOtp = _otpService.VerifyOtp(request.Email, request.Otp);
             if (!isValidOtp)
             {
-                throw new NotFoundException("OTP kh√¥ng h·ª£p l·ªá ho·∫∑c ƒë√£ h·∫øt h·∫°n.");
+                throw new NotFoundException("OTP khÙng h?p l? ho?c ? h?t h?n.");
              
             }
 
@@ -60,7 +60,7 @@ namespace EVMarketPlace.Services.Implements
             return new BaseRespone
             {
                 Status = StatusCodes.Status200OK.ToString(),
-                Message = "ƒê·∫∑t l·∫°i m·∫≠t kh·∫©u th√†nh c√¥ng."
+                Message = "–?t l?i m?t kh?u th‡nh cÙng."
             };
         }
 
@@ -70,7 +70,7 @@ namespace EVMarketPlace.Services.Implements
             if (existingUser != null)
             {
                
-                throw new NotFoundException("Email ƒë√£ ƒë∆∞·ª£c ƒëƒÉng k√Ω!");
+                throw new NotFoundException("Email ? ˝?c „ng k?!");
             }
             var user = new User
             {
@@ -83,10 +83,10 @@ namespace EVMarketPlace.Services.Implements
                 CreatedAt = DateTime.UtcNow,
                 IsActive = false,
             };
-            await _userRepository.CreateAsync(user);// l∆∞u v√†o DB
+            await _userRepository.CreateAsync(user);// l˝u v‡o DB
             var otp = _otpService.GenerateAndSaveOtp(user.Email);
-            var html = $"<p>M√£ OTP c·ªßa b·∫°n l√†: <b>{otp}</b></p><p>M√£ s·∫Ω h·∫øt h·∫°n sau 5 ph√∫t.</p>";
-            await _emailSender.SendEmailAsync(user.Email, "M√£ OTP x√°c th·ª±c", html);
+            var html = $"<p>M? OTP c?a b?n l‡: <b>{otp}</b></p><p>M? s? h?t h?n sau 5 ph˙t.</p>";
+            await _emailSender.SendEmailAsync(user.Email, "M? OTP x·c th?c", html);
             var response = new CreateAccountRespone
             {
                 FullName = user.FullName,
@@ -106,26 +106,30 @@ namespace EVMarketPlace.Services.Implements
             var account =  await _userRepository.GetAccountAsync(request);
             if (account == null)
             {
-                throw new NotFoundException("ƒêƒÉng nh·∫≠p th·∫•t b·∫°i. Vui l√≤ng ki·ªÉm tra l·∫°i email v√† m·∫≠t kh·∫©u. ");
-               
-
+                return new BaseRespone
+                {
+                    Status = StatusCodes.Status400BadRequest.ToString(),
+                    Message = "–„ng nh?p th?t b?i. Vui l?ng ki?m tra l?i email v‡ m?t kh?u.",
+                    Data = null
+                };
             }
-            if (!account.IsActive)
-            {
-                throw new NotFoundException("T√†i kho·∫£n ch∆∞a ƒë∆∞·ª£c k√≠ch ho·∫°t. Vui l√≤ng ki·ªÉm tra email ƒë·ªÉ x√°c th·ª±c t√†i kho·∫£n. ");
-
-            }
+            
             var token = GenerateJSONWebToken(account);
+            
+            // Cho phÈp „ng nh?p ngay c? khi ch˝a kÌch ho?t
+            // Nh˝ng tr? v? thÙng tin ?c bi?t ? frontend x? l?
             return new BaseRespone
             {
                 Status = StatusCodes.Status200OK.ToString(),
-                Message = "Login successfully",
+                Message = account.IsActive ? "Login successfully" : "Login successfully but account not activated",
                 Data = new LoginResponse
                 {
                     AccountId = account.UserId,
                     FullName = account.FullName,
                     Email = account.Email,
-                    Token = token
+                    Phone = account.Phone,
+                    Token = token,
+                    IsActive = account.IsActive
                 }
             };
         }
@@ -134,30 +138,30 @@ namespace EVMarketPlace.Services.Implements
 
         public async Task<BaseRespone> VerifyOtpActiveAccountAsync(string email, string opt)
         {
-            // Ki·ªÉm tra user t·ªìn t·∫°i
+            // Ki?m tra user t?n t?i
             var user = await _userRepository.GetByEmailAsync(email);
             if (user == null)
             {
-                throw new NotFoundException( "Kh√¥ng t√¨m th·∫•y t√†i kho·∫£n v·ªõi email n√†y.");
+                throw new NotFoundException( "KhÙng t?m th?y t‡i kho?n v?i email n‡y.");
                 
             }
 
-            // Ki·ªÉm tra OTP
+            // Ki?m tra OTP
             var isValidOtp =  _otpService.VerifyOtp(email, opt);
             if (!isValidOtp)
             {
-                throw new NotFoundException("OTP kh√¥ng h·ª£p l·ªá ho·∫∑c ƒë√£ h·∫øt h·∫°n.");
+                throw new NotFoundException("OTP khÙng h?p l? ho?c ? h?t h?n.");
                
             }
 
-            // N·∫øu OTP h·ª£p l·ªá -> k√≠ch ho·∫°t t√†i kho·∫£n
+            // N?u OTP h?p l? -> kÌch ho?t t‡i kho?n
             user.IsActive = true;
             await _userRepository.UpdateAsync(user);
 
             return new BaseRespone
             {
                 Status = StatusCodes.Status200OK.ToString(),
-                Message = "X√°c minh OTP th√†nh c√¥ng. T√†i kho·∫£n ƒë√£ ƒë∆∞·ª£c k√≠ch ho·∫°t.",
+                Message = "X·c minh OTP th‡nh cÙng. T‡i kho?n ? ˝?c kÌch ho?t.",
                 Data = new
                 {
                     user.FullName,
@@ -170,8 +174,8 @@ namespace EVMarketPlace.Services.Implements
 
         private string GenerateJSONWebToken(User account)
         {
-            var securityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_configuration["Jwt:Key"])); // d√πng ƒë·ªÉ l·∫•y key
-            var credentials = new SigningCredentials(securityKey, SecurityAlgorithms.HmacSha256); //m√£ h√≥a 
+            var securityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_configuration["Jwt:Key"])); // d˘ng ? l?y key
+            var credentials = new SigningCredentials(securityKey, SecurityAlgorithms.HmacSha256); //m? hÛa 
 
             var token = new JwtSecurityToken(_configuration["Jwt:Issuer"]
                     , _configuration["Jwt:Audience"]
@@ -181,7 +185,7 @@ namespace EVMarketPlace.Services.Implements
                    new Claim(JwtRegisteredClaimNames.NameId, account.UserId.ToString()),
                    new (ClaimTypes.Role, account.Role.ToString())
                     },
-                    expires: DateTime.Now.AddMinutes(120),// set th·ªùi gian h·∫øt h·∫°n
+                    expires: DateTime.Now.AddMinutes(120),// set th?i gian h?t h?n
                     signingCredentials: credentials
                     );
 
@@ -189,6 +193,61 @@ namespace EVMarketPlace.Services.Implements
             var tokenString = new JwtSecurityTokenHandler().WriteToken(token);
 
             return tokenString;
+        }
+
+        public async Task<BaseRespone> ForgotPasswordAsync(string email)
+        {
+            var user = await _userRepository.GetByEmailAsync(email);
+            if (user == null)
+            {
+                return new BaseRespone
+                {
+                    Status = StatusCodes.Status404NotFound.ToString(),
+                    Message = "KhÙng t?m th?y t‡i kho?n v?i email n‡y."
+                };
+            }
+
+            var otp = _otpService.GenerateAndSaveOtp(email, 5);
+
+            var html = $"<p>M? OTP ? ?t l?i m?t kh?u: <b>{otp}</b></p><p>M? s? h?t h?n sau 5 ph˙t.</p>";
+            await _emailSender.SendEmailAsync(email, "–?t l?i m?t kh?u", html);
+
+            return new BaseRespone
+            {
+                Status = StatusCodes.Status200OK.ToString(),
+                Message = "M? OTP ? ˝?c g?i ?n email c?a b?n."
+            };
+        }
+
+        public async Task<BaseRespone> ResendOtpAsync(string email)
+        {
+            // Ki?m tra user t?n t?i
+            var user = await _userRepository.GetByEmailAsync(email);
+            if (user == null)
+            {
+                throw new NotFoundException("Email khÙng t?n t?i trong h? th?ng.");
+            }
+
+            // Ki?m tra user ? active ch˝a
+            if (user.IsActive)
+            {
+                return new BaseRespone
+                {
+                    Status = StatusCodes.Status400BadRequest.ToString(),
+                    Message = "T‡i kho?n ? ˝?c kÌch ho?t."
+                };
+            }
+
+            // T?o v‡ g?i OTP m?i
+            var otp = _otpService.GenerateAndSaveOtp(email, 5);
+            var html = $"<p>M? OTP ? kÌch ho?t t‡i kho?n: <b>{otp}</b></p><p>M? s? h?t h?n sau 5 ph˙t.</p>";
+            await _emailSender.SendEmailAsync(email, "M? OTP kÌch ho?t t‡i kho?n", html);
+
+            return new BaseRespone
+            {
+                Status = StatusCodes.Status200OK.ToString(),
+                Message = "M? OTP ? ˝?c g?i ?n email c?a b?n."
+            };
         }
     }
 }
