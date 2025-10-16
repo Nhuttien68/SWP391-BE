@@ -7,27 +7,29 @@ public partial class Transaction
 {
     public Guid TransactionId { get; set; }
 
-    public Guid BuyerId { get; set; }
+    public Guid? BuyerId { get; set; }
 
-    public Guid SellerId { get; set; }
+    public Guid? SellerId { get; set; }
 
-    public Guid PostId { get; set; }
+    public Guid? PostId { get; set; }
 
-    public decimal Amount { get; set; }
+    public decimal? Amount { get; set; }
 
-    public string PaymentMethod { get; set; } = null!;
+    public string? PaymentMethod { get; set; }
 
-    public string Status { get; set; } = null!;
+    public string? Status { get; set; }
 
-    public DateTime CreatedAt { get; set; }
+    public DateTime? CreatedAt { get; set; }
 
-    public virtual User Buyer { get; set; } = null!;
+    public string? ContractFile { get; set; }
 
-    public virtual ICollection<Contract> Contracts { get; set; } = new List<Contract>();
+    public DateTime? SignedAt { get; set; }
 
-    public virtual Post Post { get; set; } = null!;
+    public virtual User? Buyer { get; set; }
 
-    public virtual ICollection<Review> Reviews { get; set; } = new List<Review>();
+    public virtual Post? Post { get; set; }
 
-    public virtual User Seller { get; set; } = null!;
+    public virtual Review? Review { get; set; }
+
+    public virtual User? Seller { get; set; }
 }

@@ -8,9 +8,9 @@ namespace EVMarketPlace.Repositories.ResponseDTO
 {
     public class WalletResponeseDto
     {
-        public Guid WalletId { get; set; }
-        public Guid UserId { get; set; }
-        public decimal Balance { get; set; }
-        public DateTime LastUpdated { get; set; }
+        public Guid? WalletId { get; set; }
+        public Guid? UserId { get; set; }
+        public decimal? Balance { get; set; }
+        public DateTime? LastUpdated { get; set; }
     }
 }

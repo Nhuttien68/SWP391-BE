@@ -1,11 +1,14 @@
-﻿using EVMarketPlace.Repositories.RequestDTO.Posts;
-using EVMarketPlace.Repositories.ResponseDTO.Posts;
-using EVMarketPlace.Services.Interfaces;
-using Microsoft.EntityFrameworkCore;
-using EVMarketPlace.Repositories.Entity;
+﻿using EVMarketPlace.Repositories.Entity;
+using EVMarketPlace.Repositories.Enum;
 using EVMarketPlace.Repositories.Repository;
+using EVMarketPlace.Repositories.RequestDTO.Posts;
+using EVMarketPlace.Repositories.ResponseDTO;
+using EVMarketPlace.Repositories.ResponseDTO.Posts;
 using EVMarketPlace.Repositories.Utils;
+using EVMarketPlace.Services.Interfaces;
 using Microsoft.AspNetCore.Http;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Hosting;
 
 namespace EVMarketPlace.Services.Implements
 {
@@ -16,156 +19,418 @@ namespace EVMarketPlace.Services.Implements
         private readonly PostRepository _postRepository;
         private readonly UserUtility _userUtility;
         private readonly FirebaseStorageService _firebaseStorage;
-        private static readonly HashSet<String> _types = new(StringComparer.OrdinalIgnoreCase) { "vehicle", "battery" };
-
-        public PostService( PostRepository postRepository , UserUtility userUtility, FirebaseStorageService firebaseStorage)
+        
+        public PostService( PostRepository postRepository , UserUtility userUtility, FirebaseStorageService firebaseStorage, PostImageRepository postImageRepository)
         {
             _postRepository = postRepository;
             _userUtility = userUtility;
             _firebaseStorage = firebaseStorage;
+            
         }
 
-
-        private void EnsureOwner(Post post)
+        public async Task<BaseResponse> CreateBatteryPostAsync(PostCreateBatteryRequest request)
         {
-            var currentUserId = _userUtility.GetUserIdFromToken();
-            if (post.UserId != currentUserId)
+            try
             {
-                throw new UnauthorizedAccessException("Bạn không có quyền với bài viết này.");
-            }
-        }
-
-        public void ValidateCreateRequest(PostCreateRequest req)
-        {
-            if (String.IsNullOrWhiteSpace(req.Title)) throw new ArgumentException("Title không được để trống.");
-            if (req.Price < 0) throw new ArgumentException("Price phải là số dương.");
-            if (String.IsNullOrWhiteSpace(req.Type) || !_types.Contains(req.Type)) throw new ArgumentException("Type phải là 'vehicle' hoặc 'battery'.");
-            if (req.Description != null && req.Description.Length > 1000) throw new ArgumentException("Description không vượt quá 1000 ký tự.");
-            if (req.Title.Length > 200) throw new ArgumentException("Title không vượt quá 200 ký tự.");
-        }
-
-
-        // Tạo mới Post
-        // CancellationToken để hủy tác vụ khi client ngắt request (ví dụ: đóng tab, timeout) giúp tiết kiệm tài nguyên.
-        public async Task<PostDto> CreateAsync(PostCreateRequest req, IFormFile? image, CancellationToken ct = default) 
-        {
-            string? imageUrl = null;
-            if (image != null)
-            {
-                using var stream = image.OpenReadStream();
-                imageUrl = await _firebaseStorage.UploadFileAsync(stream, image.FileName, image.ContentType);
-            }
-
-            var userid = _userUtility.GetUserIdFromToken(); // get userId from token
-            ValidateCreateRequest(req); // validate request
-            if (userid == Guid.Empty)
-            {
-                throw new UnauthorizedAccessException("User ID does not found in token.");
-            }
-            var post = new Post
-            {
-                PostId = Guid.NewGuid(),
-                UserId = userid,
-                Type = req.Type,
-                Title = req.Title,
-                Description = req.Description,
-                Price = req.Price,
-                IsActive = false,
-                CreatedAt = DateTime.UtcNow,         // dùng UTC cho đồng nhất
-            };
-            // nếu có ảnh thì thêm vào PostImages, vì 1 post có thể có nhiều ảnh
-            if (!string.IsNullOrEmpty(imageUrl))
-            {
-                post.PostImages.Add( new PostImage
+                var userId = _userUtility.GetUserIdFromToken();
+                if (userId == Guid.Empty)
+                    throw new UnauthorizedAccessException("User ID not found in token.");
+                var newPost = new Post
                 {
-                    ImageId = Guid.NewGuid(),
-                    PostId = post.PostId,
-                    ImageUrl = imageUrl,
-                });
+                    PostId = Guid.NewGuid(),
+                    UserId = userId,
+                    Type = PostTypeEnum.BATTERY.ToString(),
+                    Title = request.Title,
+                    Description = request.Description,
+                    Price = request.Price,
+                    CreatedAt = DateTime.UtcNow,
+                    Status = PostStatusEnum.PENNDING.ToString(),
+                    PostImages = new List<PostImage>(),
+                    Battery = new Battery
+                    {
+                        BatteryId = Guid.NewGuid(),
+                        BrandId = request.batteryCreateDto.BranId,
+                        Capacity = request.batteryCreateDto.Capacity,
+                        Condition = request.batteryCreateDto.Condition
+                    }
+                };
+
+                // ✅ Upload ảnh
+                if (request.Images != null && request.Images.Count > 0)
+                {
+                    foreach (var image in request.Images)
+                    {
+                        string? imageUrl = null;
+                        if (image != null)
+                        {
+                            using var stream = image.OpenReadStream();
+                            imageUrl = await _firebaseStorage.UploadFileAsync(stream, image.FileName, image.ContentType);
+                        }
+
+                        if (!string.IsNullOrEmpty(imageUrl))
+                        {
+                            var postImage = new PostImage
+                            {
+                                ImageId = Guid.NewGuid(),
+                                PostId = newPost.PostId,
+                                ImageUrl = imageUrl,
+                                UploadedAt = DateTime.Now,
+                            };
+                            newPost.PostImages.Add(postImage);
+                        }
+                    }
+                }
+                await _postRepository.CreateAsync(newPost);
+                // ✅ Map sang DTO
+                var postDto = await _postRepository.GetPostByIdWithImageAsync(newPost.PostId);
+                return new BaseResponse
+                {
+                    Status = StatusCodes.Status201Created.ToString(),
+                    Message = "Post created successfully.",
+                    Data = postDto
+                };
+            }
+            catch (Exception ex)
+            {
+                return new BaseResponse
+                {
+                    Status = StatusCodes.Status500InternalServerError.ToString(),
+                    Message = $"Error: {ex.Message}"
+                };
+            }
+        }
+
+        public async Task<BaseResponse> CreateVehiclePostAsync(PostCreateVehicleRequest request)
+        {
+            try
+            {
+                var userId =  _userUtility.GetUserIdFromToken();
+                if (userId == Guid.Empty)
+                    throw new UnauthorizedAccessException("User ID not found in token.");
+
+                var newPost = new Post
+                {
+                    PostId = Guid.NewGuid(),
+                    UserId = userId,
+                    Type = PostTypeEnum.VEHICLE.ToString(),
+                    Title = request.Title,
+                    Description = request.Description,
+                    Price = request.Price,
+                    CreatedAt = DateTime.UtcNow,
+                    Status = PostStatusEnum.PENNDING.ToString(),
+
+                    PostImages = new List<PostImage>(),
+                    Vehicle = new Vehicle
+                    {
+                        VehicleId = Guid.NewGuid(),
+                        BrandId = request.vehicleCreateDto.BrandId,
+                        Model = request.vehicleCreateDto.Model,
+                        Year = request.vehicleCreateDto.Year,
+                        Mileage = request.vehicleCreateDto.Mileage
+                    }
+                };
+
+                // ✅ Upload ảnh
+                if (request.Images != null && request.Images.Count > 0)
+                {
+                    foreach (var image in request.Images)
+                    {
+                        string? imageUrl = null;
+                        if (image != null)
+                        {
+                            using var stream = image.OpenReadStream();
+                            imageUrl = await _firebaseStorage.UploadFileAsync(stream, image.FileName, image.ContentType);
+                        }
+
+                        if (!string.IsNullOrEmpty(imageUrl))
+                        {
+                            var postImage = new PostImage
+                            {
+                                ImageId = Guid.NewGuid(),
+                                PostId = newPost.PostId,
+                                ImageUrl = imageUrl,
+                                UploadedAt = DateTime.Now,
+                            };
+                            newPost.PostImages.Add(postImage);
+                        }
+                    }
+                }
+
+                await _postRepository.CreateAsync(newPost);
+               
+
+                // ✅ Map sang DTO
+                var postDto = new PostResponseDto
+                {
+                    PostId = newPost.PostId,
+                    UserId = newPost.UserId,
+                    Title = newPost.Title,
+                    Description = newPost.Description,
+                    Price = newPost.Price,
+                    Type = newPost.Type,
+                    CreatedAt = newPost.CreatedAt,
+                    Status = newPost.Status,
+                    ImageUrls = newPost.PostImages.Select(i => i.ImageUrl).ToList()
+                };
+
+                return new BaseResponse
+                {
+                    Status = StatusCodes.Status201Created.ToString(),
+                    Message = "Post created successfully.",
+                    Data = postDto
+                };
+            }
+            catch (Exception ex)
+            {
+                return new BaseResponse
+                {
+                    Status = StatusCodes.Status500InternalServerError.ToString(),
+                    Message = $"Error: {ex.Message}"
+                };
+            }
+        }
+
+        public async Task<BaseResponse> DeletePostAsync(Guid postId)
+        {
+            try
+            {
+                var post = await _postRepository.GetByIdAsync(postId);
+                if (post == null)
+                {
+                    return new BaseResponse
+                    {
+                        Status = StatusCodes.Status404NotFound.ToString(),
+                        Message = "Post not found."
+                    };
+                }
+                post.Status = PostStatusEnum.DELETED.ToString();
+
+                await _postRepository.UpdateAsync(post);
+
+                return new BaseResponse
+                {
+                    Status = StatusCodes.Status200OK.ToString(),
+                    Message = "Post deleted (soft) successfully."
+                };
+            }
+            catch (Exception ex)
+            {
+                return new BaseResponse
+                {
+                    Status = StatusCodes.Status500InternalServerError.ToString(),
+                    Message = $"Error: {ex.Message}"
+                };
+            }
+        }
+
+        public async Task<BaseResponse> GetAllPostsAsync()
+        {
+            var posts = await _postRepository.GetAllPostWithImageAsync();
+
+            var response = posts.Select(p => new PostResponseDto
+            {
+                PostId = p.PostId,
+                UserId = p.UserId,
+                Title = p.Title,
+                Description = p.Description,
+                Price = p.Price,
+                Type = p.Type,
+                CreatedAt = p.CreatedAt,
+                Status = p.Status,
+                ImgId = p.PostImages?.Select(i => i.ImageId).ToList(),
+                ImageUrls = p.PostImages?.Select(i => i.ImageUrl).ToList(),
+
+                //  Nếu là bài đăng về xe
+                Vehicle = p.Vehicle != null ? new VehicleDto
+                {
+                    VehicleId = p.Vehicle.VehicleId,
+                    BrandName = p.Vehicle.Brand?.Name ?? "Unknown",
+                    Model = p.Vehicle.Model ?? "",
+                    Year = p.Vehicle.Year,
+                    Mileage = p.Vehicle.Mileage
+                } : null,
+
+                //  Nếu là bài đăng về pin
+                Battery = p.Battery != null ? new BatteryDto
+                {
+                    BatteryId = p.Battery.BatteryId,
+                    BrandName = p.Battery.Brand?.Name ?? "Unknown",
+                    Capacity = p.Battery.Capacity,
+                    Condition = p.Battery.Condition ?? ""
+                } : null
+            }).ToList();
+
+            return new BaseResponse
+            {
+                Status = StatusCodes.Status200OK.ToString(),
+                Message = "Get all posts successfully.",
+                Data = response
+            };
+        }
+
+        public async Task<BaseResponse> GetPostByIdAsync(Guid postId)
+        {
+            var post = await _postRepository.GetPostByIdWithImageAsync(postId);
+
+            if (post == null)
+            {
+                return new BaseResponse
+                {
+                    Status = StatusCodes.Status404NotFound.ToString(),
+                    Message = "Post not found."
+                };
             }
 
-            await _postRepository.CreateAsync(post); // Thêm vào DB
+            var postDto = new PostResponseDto
+            {
+                PostId = post.PostId,
+                UserId = post.UserId,
+                Title = post.Title,
+                Description = post.Description,
+                Price = post.Price,
+                Type = post.Type,
+                CreatedAt = post.CreatedAt,
+                Status = post.Status,
+                ImgId = post.PostImages?.Select(i => i.ImageId).ToList(),
+                ImageUrls = post.PostImages?.Select(i => i.ImageUrl).ToList()
+            };
 
-            return ToDto(post);
+            // ✅ Map Vehicle (1-1)
+            if (post.Vehicle != null)
+            {
+                postDto.Vehicle = new VehicleDto
+                {
+                    VehicleId = post.Vehicle.VehicleId,
+                    BrandName = post.Vehicle.Brand?.Name ?? "Unknown",
+                    Model = post.Vehicle.Model ?? "",
+                    Year = post.Vehicle.Year,
+                    Mileage = post.Vehicle.Mileage
+                };
+            }
+
+            // ✅ Map Battery (1-1)
+            if (post.Battery != null)
+            {
+                postDto.Battery = new BatteryDto
+                {
+                    BatteryId = post.Battery.BatteryId,
+                    BrandName = post.Battery.Brand?.Name ?? "Unknown",
+                    Capacity = post.Battery.Capacity,
+                    Condition = post.Battery.Condition ?? ""
+                };
+            }
+
+            return new BaseResponse
+            {
+                Status = StatusCodes.Status200OK.ToString(),
+                Message = "Get post successfully.",
+                Data = postDto
+            };
         }
 
-
-        //Lấy 1 post theo Id(read-only)
-        public async Task<PostDto?> GetByIdAsync(Guid postId, CancellationToken ct = default)
+        public async Task<BaseResponse> UpdateBatteryPostAsync(UpdateBatteryPostRequest request)
         {
-            var post = await _postRepository.GetByIdAsync(postId);
+            try
+            {
+                var post = await _postRepository.GetPostByIdWithImageAsync(request.PostId);
+                if (post == null)
+                    return new BaseResponse { Status = StatusCodes.Status404NotFound.ToString(), Message = "Post not found" };
 
-            return post is null ? null : ToDto(post);
-        }
-        // getall
-        public async Task<IReadOnlyList<PostDto>> GetAllAsync(CancellationToken ct = default)
-        {
-            var posts = await _postRepository.GetAllAsync();
-            return posts.Select(p => ToDto(p)).ToList();
-        }
+                
+                post.Title = request.Title ?? post.Title;
+                post.Description = request.Description ?? post.Description;
+                post.Price = request.Price ?? post.Price;
 
+                
+                if (post.Battery != null)
+                {
+                    post.Battery.BrandId = request.BrandId ?? post.Battery.BrandId;
+                    post.Battery.Capacity = request.Capacity ?? post.Battery.Capacity;
+                    post.Battery.Condition = request.Condition ?? post.Battery.Condition;
+                }
 
+                await UpdatePostImagesAsync(post, request.KeepImageIds, request.NewImages);
 
-
-        // Cập nhật Post (partial update: gửi gì sửa nấy)
-        public async Task<PostDto> UpdateAsync(PostUpdateRequest req, CancellationToken ct = default)
-        {
-            var post = await _postRepository.GetByIdAsync(req.PostId);
-            if (post == null)
-                throw new KeyNotFoundException("Post không tồn tại");
-
-
-            EnsureOwner(post);
-            // Validate các trường nếu không null
-            if (req.Title is not null && String.IsNullOrWhiteSpace(req.Title))
-                throw new ArgumentException("Title không được để trống.");
-            if(req.Title != null && req.Title.Length > 200)
-                throw new ArgumentException("Title không vượt quá 200 ký tự.");
-            if(req.Description is not null && req.Description.Length > 1000)
-                throw new ArgumentException("Description không vượt quá 1000 ký tự.");
-            if(req.Type is not null && !_types.Contains(req.Type))
-                throw new ArgumentException("Type phải là 'vehicle' hoặc 'battery'.");
-            if (req.Price is not null && req.Price < 0)
-                throw new ArgumentException("Price phải là số dương.");
-
-            // Áp dụng cập nhật (gửi gì sửa nấy)
-            post.Type = req.Type ?? post.Type;
-            post.Title = req.Title ?? post.Title;
-            post.Description = req.Description ?? post.Description;
-            post.Price = req.Price ?? post.Price;
-            post.IsActive = req.IsActive ?? post.IsActive;
-
-            await _postRepository.UpdateAsync(post);
-            return ToDto(post);
+                await _postRepository.UpdateAsync(post);
+                return new BaseResponse
+                {
+                    Status = StatusCodes.Status201Created.ToString(),
+                    Message = "Battery post updated successfully."
+                };
+            }
+            catch (Exception ex)
+            {
+                return new BaseResponse { Status = StatusCodes.Status500InternalServerError.ToString(), Message = ex.Message };
+            }
         }
 
-
-
-
-        //Xóa Post theo Id
-        public async Task<bool> DeleteAsync(Guid postId, CancellationToken ct = default)
+        public async Task<BaseResponse> UpdateVehiclePostAsync(UpdateVehiclePostRequest request)
         {
-            var post = await _postRepository.GetByIdAsync(postId);
-            if (post == null) return false;
+            try
+            {
+                var post = await _postRepository.GetPostByIdWithImageAsync(request.PostId);
+                if (post == null)
+                    return new BaseResponse { Status = StatusCodes.Status404NotFound.ToString(), Message = "Post not found" };
 
-            EnsureOwner(post);
+              
+                post.Title = request.Title ?? post.Title;
+                post.Description = request.Description ?? post.Description;
+                post.Price = request.Price ?? post.Price;
 
-            await _postRepository.RemoveAsync(post);
-            return true;
+               
+                if (post.Vehicle != null)
+                {
+                    post.Vehicle.BrandId = request.BrandId ?? post.Vehicle.BrandId;
+                    post.Vehicle.Model = request.Model ?? post.Vehicle.Model;
+                    post.Vehicle.Year = request.Year ?? post.Vehicle.Year;
+                    post.Vehicle.Mileage = request.Mileage ?? post.Vehicle.Mileage;
+                }
+
+               
+                await UpdatePostImagesAsync(post, request.KeepImageIds, request.NewImages);
+
+                await _postRepository.UpdateAsync(post);
+                return new BaseResponse
+                {
+                    Status = StatusCodes.Status200OK.ToString(),
+                    Message = "Vehicle post updated successfully."
+                };
+            }
+            catch (Exception ex)
+            {
+                return new BaseResponse { Status =StatusCodes.Status500InternalServerError.ToString(), Message = ex.Message };
+            }
         }
-
-        //Map Entity -> DTO
-        private static PostDto ToDto(Post p) => new PostDto
+        private async Task UpdatePostImagesAsync(Post post, List<Guid>? keepImageIds, List<IFormFile>? newImages)
         {
-            PostId = p.PostId,
-            UserId = p.UserId,
-            Type = p.Type,
-            Title = p.Title,
-            Description = p.Description,
-            Price = p.Price,
-            IsActive = p.IsActive,
-            CreatedAt = p.CreatedAt
-        };
+           
+            if (keepImageIds != null && post.PostImages.Any())
+            {
+                var toDelete = post.PostImages.Where(img => !keepImageIds.Contains(img.ImageId)).ToList();
+                foreach (var img in toDelete)
+                {
+                    await _firebaseStorage.DeleteFileAsync(img.ImageUrl);
+                    post.PostImages.Remove(img); 
+                }
+            }
 
+           
+            if (newImages != null && newImages.Count > 0)
+            {
+                foreach (var image in newImages)
+                {
+                    using var stream = image.OpenReadStream();
+                    var imageUrl = await _firebaseStorage.UploadFileAsync(stream, image.FileName, image.ContentType);
+
+                    post.PostImages.Add(new PostImage
+                    {
+                        ImageId = Guid.NewGuid(),
+                        PostId = post.PostId,
+                        ImageUrl = imageUrl,
+                        UploadedAt = DateTime.Now
+                    });
+                }
+            }
+        }
     }
 }

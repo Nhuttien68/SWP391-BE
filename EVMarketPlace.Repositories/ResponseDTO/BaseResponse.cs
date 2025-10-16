@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace EVMarketPlace.Repositories.ResponseDTO
 {
-    public class BaseRespone
+    public class BaseResponse
     {
         public string Status { get; set; }
 

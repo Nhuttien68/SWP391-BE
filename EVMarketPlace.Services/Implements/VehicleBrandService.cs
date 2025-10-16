@@ -20,7 +20,7 @@ namespace EVMarketPlace.Services.Implements
             _vehicleBrandRepository = vehicleBrandRepository;
         }
 
-        public async Task<BaseRespone> CreateVehicleBrandAsync(VehiCleBrandRequestDTO requestDTO)
+        public async Task<BaseResponse> CreateVehicleBrandAsync(VehiCleBrandRequestDTO requestDTO)
         {
             try
             {
@@ -35,7 +35,7 @@ namespace EVMarketPlace.Services.Implements
                     BrandId = newbrand.BrandId,
                     BrandName = newbrand.Name
                 };
-                return new BaseRespone
+                return new BaseResponse
                 {
                     Status = StatusCodes.Status201Created.ToString(),
                     Message = "Create vehicle brand successfully",
@@ -44,7 +44,7 @@ namespace EVMarketPlace.Services.Implements
             }
             catch (Exception ex)
             {
-                return new BaseRespone
+                return new BaseResponse
                 {
                     Status = StatusCodes.Status500InternalServerError.ToString(),
                     Message = "An error occurred while creating the vehicle brand.",
@@ -53,12 +53,12 @@ namespace EVMarketPlace.Services.Implements
 
             }
         }
-        public async Task<BaseRespone> DeleteVehicleBrandAsync(Guid brandId)
+        public async Task<BaseResponse> DeleteVehicleBrandAsync(Guid brandId)
         {
             var brand = await _vehicleBrandRepository.GetByIdAsync(brandId);
             if (brand == null)
             {
-                return new BaseRespone
+                return new BaseResponse
                 {
                     Status = StatusCodes.Status404NotFound.ToString(),
                     Message = "Vehicle brand not found.",
@@ -66,7 +66,7 @@ namespace EVMarketPlace.Services.Implements
                 };
             }
             await _vehicleBrandRepository.RemoveAsync(brand);
-            return new BaseRespone
+            return new BaseResponse
             {
                 Status = StatusCodes.Status200OK.ToString(),
                 Message = "Vehicle brand deleted successfully.",
@@ -75,7 +75,7 @@ namespace EVMarketPlace.Services.Implements
 
         }
 
-        public async Task<BaseRespone> GetAllVehicleBrandsAsync()
+        public async Task<BaseResponse> GetAllVehicleBrandsAsync()
         {
             try
             {
@@ -85,7 +85,7 @@ namespace EVMarketPlace.Services.Implements
                     BrandId = b.BrandId,
                     BrandName = b.Name
                 }).ToList();
-                return new BaseRespone
+                return new BaseResponse
                 {
                     Status = StatusCodes.Status200OK.ToString(),
                     Message = "Vehicle brands retrieved successfully.",
@@ -94,7 +94,7 @@ namespace EVMarketPlace.Services.Implements
             }
             catch (Exception ex)
             {
-                return new BaseRespone
+                return new BaseResponse
                 {
                     Status = StatusCodes.Status500InternalServerError.ToString(),
                     Message = "An error occurred while retrieving vehicle brands.",
@@ -104,14 +104,14 @@ namespace EVMarketPlace.Services.Implements
 
         }
 
-        public async Task<BaseRespone> GetVehicleBrandByIdAsync(Guid brandId)
+        public async Task<BaseResponse> GetVehicleBrandByIdAsync(Guid brandId)
         {
             try
             {
                 var brand = await _vehicleBrandRepository.GetByIdAsync(brandId);
                 if (brand == null)
                 {
-                    return new BaseRespone
+                    return new BaseResponse
                     {
                         Status = StatusCodes.Status404NotFound.ToString(),
                         Message = "Vehicle brand not found.",
@@ -123,7 +123,7 @@ namespace EVMarketPlace.Services.Implements
                     BrandId = brand.BrandId,
                     BrandName = brand.Name
                 };
-                return new BaseRespone
+                return new BaseResponse
                 {
                     Status = StatusCodes.Status200OK.ToString(),
                     Message = "Vehicle brand retrieved successfully.",
@@ -132,7 +132,7 @@ namespace EVMarketPlace.Services.Implements
             }
             catch (Exception ex)
             {
-                return new BaseRespone
+                return new BaseResponse
                 {
                     Status = StatusCodes.Status500InternalServerError.ToString(),
                     Message = "An error occurred while retrieving the vehicle brand.",
@@ -142,14 +142,14 @@ namespace EVMarketPlace.Services.Implements
 
         }
 
-        public async Task<BaseRespone> UpdateVehicleBrandAsync(VehiCleBrandUpdateRequestDTO requestDTO)
+        public async Task<BaseResponse> UpdateVehicleBrandAsync(VehiCleBrandUpdateRequestDTO requestDTO)
         {
             try
             {
                 var brand = await _vehicleBrandRepository.GetByIdAsync(requestDTO.BrandId);
                 if (brand == null)
                 {
-                    return new BaseRespone
+                    return new BaseResponse
                     {
                         Status = StatusCodes.Status404NotFound.ToString(),
                         Message = "Vehicle brand not found.",
@@ -163,7 +163,7 @@ namespace EVMarketPlace.Services.Implements
                     BrandId = brand.BrandId,
                     BrandName = brand.Name
                 };
-                return new BaseRespone
+                return new BaseResponse
                 {
                     Status = StatusCodes.Status200OK.ToString(),
                     Message = "Vehicle brand updated successfully.",
@@ -172,7 +172,7 @@ namespace EVMarketPlace.Services.Implements
             }
             catch (Exception ex)
             {
-                return new BaseRespone
+                return new BaseResponse
                 {
                     Status = StatusCodes.Status500InternalServerError.ToString(),
                     Message = "An error occurred while updating the vehicle brand.",

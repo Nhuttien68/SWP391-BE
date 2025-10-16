@@ -7,23 +7,23 @@ public partial class Post
 {
     public Guid PostId { get; set; }
 
-    public Guid UserId { get; set; }
+    public Guid? UserId { get; set; }
 
-    public string Type { get; set; } = null!;
+    public string? Type { get; set; }
 
-    public string Title { get; set; } = null!;
+    public string? Title { get; set; }
 
     public string? Description { get; set; }
 
-    public decimal Price { get; set; }
+    public decimal? Price { get; set; }
 
-    public bool IsActive { get; set; }
+    public DateTime? CreatedAt { get; set; }
 
-    public DateTime CreatedAt { get; set; }
+    public string? Status { get; set; }
 
-    public virtual ICollection<Auction> Auctions { get; set; } = new List<Auction>();
+    public virtual Auction? Auction { get; set; }
 
-    public virtual ICollection<Battery> Batteries { get; set; } = new List<Battery>();
+    public virtual Battery? Battery { get; set; }
 
     public virtual ICollection<CartItem> CartItems { get; set; } = new List<CartItem>();
 
@@ -33,7 +33,7 @@ public partial class Post
 
     public virtual ICollection<Transaction> Transactions { get; set; } = new List<Transaction>();
 
-    public virtual User User { get; set; } = null!;
+    public virtual User? User { get; set; }
 
-    public virtual ICollection<Vehicle> Vehicles { get; set; } = new List<Vehicle>();
+    public virtual Vehicle? Vehicle { get; set; }
 }

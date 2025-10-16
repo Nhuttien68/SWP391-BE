@@ -7,9 +7,9 @@ public partial class Vehicle
 {
     public Guid VehicleId { get; set; }
 
-    public Guid PostId { get; set; }
+    public Guid? PostId { get; set; }
 
-    public Guid BrandId { get; set; }
+    public Guid? BrandId { get; set; }
 
     public string? Model { get; set; }
 
@@ -17,7 +17,7 @@ public partial class Vehicle
 
     public int? Mileage { get; set; }
 
-    public virtual VehicleBrand Brand { get; set; } = null!;
+    public virtual VehicleBrand? Brand { get; set; }
 
-    public virtual Post Post { get; set; } = null!;
+    public virtual Post? Post { get; set; }
 }

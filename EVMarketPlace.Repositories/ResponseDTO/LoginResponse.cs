@@ -18,6 +18,6 @@ namespace EVMarketPlace.Repositories.ResponseDTO
 
         public string Token { get; set; } = null!;
 
-        public bool IsActive { get; set; }
+        public string Status { get; set; }
     }
 }

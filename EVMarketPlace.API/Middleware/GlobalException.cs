@@ -32,12 +32,12 @@ namespace EVMarketPlace.API.Middleware
             context.Response.ContentType = "application/json";
             var response = context.Response;
 
-            BaseRespone errorResponse;
+            BaseResponse errorResponse;
             switch (exception)
             {
                 case NotFoundException notFoundException:
                     response.StatusCode = (int)HttpStatusCode.NotFound;
-                    errorResponse = new BaseRespone
+                    errorResponse = new BaseResponse
                     {
                         Status = StatusCodes.Status404NotFound.ToString(),
                         Message = notFoundException.Message,
@@ -46,7 +46,7 @@ namespace EVMarketPlace.API.Middleware
                     break;
                 default:
                     response.StatusCode = (int)HttpStatusCode.InternalServerError;
-                    errorResponse = new BaseRespone
+                    errorResponse = new BaseResponse
                     {
                         Status = StatusCodes.Status500InternalServerError.ToString(),
                         Message = "An unexpected error occurred.",

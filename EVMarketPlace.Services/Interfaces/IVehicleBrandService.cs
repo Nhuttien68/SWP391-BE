@@ -10,10 +10,10 @@ namespace EVMarketPlace.Services.Interfaces
 {
     public interface IVehicleBrandService
     {
-        Task<BaseRespone> CreateVehicleBrandAsync(VehiCleBrandRequestDTO requestDTO);
-        Task<BaseRespone> UpdateVehicleBrandAsync(VehiCleBrandUpdateRequestDTO requestDTO);
-        Task<BaseRespone> DeleteVehicleBrandAsync(Guid brandId);
-        Task<BaseRespone> GetAllVehicleBrandsAsync();
-        Task<BaseRespone> GetVehicleBrandByIdAsync(Guid brandId);
+        Task<BaseResponse> CreateVehicleBrandAsync(VehiCleBrandRequestDTO requestDTO);
+        Task<BaseResponse> UpdateVehicleBrandAsync(VehiCleBrandUpdateRequestDTO requestDTO);
+        Task<BaseResponse> DeleteVehicleBrandAsync(Guid brandId);
+        Task<BaseResponse> GetAllVehicleBrandsAsync();
+        Task<BaseResponse> GetVehicleBrandByIdAsync(Guid brandId);
     }
 }

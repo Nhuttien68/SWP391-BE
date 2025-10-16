@@ -14,75 +14,52 @@ namespace EVMarketPlace.API.Controllers
     public class UserController : ControllerBase
     {
         private IUserService _userService;
-        private readonly IOtpService _otpService;
         private readonly IEmailSender _emailSender;
 
 
-        public UserController(IUserService userService, IOtpService otpService,IEmailSender emailSender  )
+        public UserController(IUserService userService, IEmailSender emailSender  )
         {
-            _userService = userService;
-            _otpService = otpService;
+            _userService = userService;     
             _emailSender = emailSender;
         }
 
         [HttpPost("register")]
-        public async Task<BaseRespone> Create(CreateAccountRequest request)
+        public async Task<IActionResult> Create([FromBody] CreateAccountRequest request)
         {
-            return await _userService.CreateAccount(request);
+            var response = await _userService.CreateAccount(request);
+            return StatusCode(int.Parse(response.Status), response);
         }
         [HttpPost("verify-email-active-account")]
-        public async Task<BaseRespone> VerifyEmail(string email, string otp)
+        public async Task<IActionResult> VerifyEmail(string email, string otp)
         {
-            return await _userService.VerifyOtpActiveAccountAsync(email, otp);
+            var response = await _userService.VerifyOtpActiveAccountAsync(email, otp);
+            return StatusCode(int.Parse(response.Status), response);
         }
         [HttpPut("change-password")]
-        public async Task<BaseRespone> ResetPassword(ChangePasswordRequest request)
+        public async Task<IActionResult> ResetPassword(ChangePasswordRequest request)
         {
-            return await _userService.ChangePasswordAsync(request);
+            var response = await _userService.ChangePasswordAsync(request);
+            return StatusCode(int.Parse(response.Status), response);
         }
         [HttpPost("login")]
-        public async Task<BaseRespone> Login(LoginRequest request)
+        public async Task<IActionResult> Login(LoginRequest request)
         {
-            return await _userService.LoginAsync(request);
+            var response = await _userService.LoginAsync(request);
+            return StatusCode(int.Parse(response.Status), response);
         }
         //[HttpPost("resend-otp")]
-        //public async Task<IActionResult> SendOtp([FromBody] ResendOtpRequest request)
+        //public async Task<IActionResult>ResentOpt(string gmail)
         //{
-        //    try
-        //    {
-        //        var result = await _userService.ResendOtpAsync(request.Email);
-                
-        //        if (result.Status == "200")
-        //        {
-        //            return Ok(result);
-        //        }
-        //        else
-        //        {
-        //            return BadRequest(result);
-        //        }
-        //    }
-        //    catch (NotFoundException ex)
-        //    {
-        //        return BadRequest(new BaseRespone
-        //        {
-        //            Status = "404",
-        //            Message = ex.Message
-        //        });
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        return BadRequest(new BaseRespone
-        //        {
-        //            Status = "500",
-        //            Message = "Có lỗi xảy ra khi gửi OTP: " + ex.Message
-        //        });
-        //    }
+        //    var otp = await _userService.ResendOtpAsync(gmail);
+        //    return StatusCode(int.Parse(otp.Status), otp);
+
         //}
 
         [HttpPost("forgot-password")]
-        public async Task<BaseRespone> ForgotPassword([FromBody] string email)
+        public async Task<IActionResult> ForgotPassword([FromBody] string email)
         {
-            return await _userService.ForgotPasswordAsync(email);
+            var response = await _userService.ForgotPasswordAsync(email);
+            return StatusCode(int.Parse(response.Status), response);
         }
     }
 }

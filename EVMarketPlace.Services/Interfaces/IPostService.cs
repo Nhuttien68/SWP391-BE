@@ -1,4 +1,5 @@
 ﻿using EVMarketPlace.Repositories.RequestDTO.Posts;
+using EVMarketPlace.Repositories.ResponseDTO;
 using EVMarketPlace.Repositories.ResponseDTO.Posts;
 using Microsoft.AspNetCore.Http;
 
@@ -9,10 +10,14 @@ namespace EVMarketPlace.Services.Interfaces
 
     public interface IPostService
     {
-        Task<PostDto> CreateAsync(PostCreateRequest req,IFormFile? image, CancellationToken ct = default);
-        Task<PostDto?> GetByIdAsync(Guid postId, CancellationToken ct = default);
-        Task<IReadOnlyList<PostDto>> GetAllAsync(CancellationToken ct = default);
-        Task<PostDto> UpdateAsync(PostUpdateRequest req, CancellationToken ct = default);
-        Task<bool> DeleteAsync(Guid postId, CancellationToken ct = default);
+        Task<BaseResponse> CreateVehiclePostAsync(PostCreateVehicleRequest request);
+        Task<BaseResponse> CreateBatteryPostAsync(PostCreateBatteryRequest request);
+        Task<BaseResponse> GetAllPostsAsync();
+        Task<BaseResponse> GetPostByIdAsync(Guid postId);
+        Task<BaseResponse> UpdateVehiclePostAsync(UpdateVehiclePostRequest request);
+        Task<BaseResponse> UpdateBatteryPostAsync(UpdateBatteryPostRequest request);
+        Task<BaseResponse> DeletePostAsync(Guid postId);
+
+      
     }
 }

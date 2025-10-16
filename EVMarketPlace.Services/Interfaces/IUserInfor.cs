@@ -9,7 +9,7 @@ namespace EVMarketPlace.Services.Interfaces
 {
     public interface IUserInfor
     {
-        Task<BaseRespone> GetByUserId(Guid userId);
-        Task<BaseRespone> UpdateUserInfor(Guid userId, string fullName, string phoneNumber, string address);
+        Task<BaseResponse> GetByUserId(Guid userId);
+        Task<BaseResponse> UpdateUserInfor(Guid userId, string fullName, string phoneNumber, string address);
     }
 }

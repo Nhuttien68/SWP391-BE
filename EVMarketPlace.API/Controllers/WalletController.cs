@@ -16,7 +16,7 @@ namespace EVMarketPlace.API.Controllers
             _walletService = walletService;
         }
         [HttpPost("create-wallet")]
-        public async Task<BaseRespone> CreateWallet()
+        public async Task<BaseResponse> CreateWallet()
         {
             return await _walletService.CreateWallet();
         }

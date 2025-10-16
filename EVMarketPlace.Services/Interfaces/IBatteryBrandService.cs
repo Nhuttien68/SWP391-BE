@@ -11,11 +11,11 @@ namespace EVMarketPlace.Services.Interfaces
 {
     public interface IBatteryBrandService
     {
-        Task<BaseRespone> CreateBatteryAsync(BatteryBrandRequestDTO requestDTO);
-        Task<BaseRespone> UpdateBatteryAsync(UpdateBatteryBrandRequestDTO requestDTO);
-        Task<BaseRespone> DeleteBatteryAsync(Guid BrandBatteryId);
-        Task<BaseRespone> GetAllBatteryAsync();
-        Task<BaseRespone> GetBatteryByIdAsync(Guid BrandBatteryId);
+        Task<BaseResponse> CreateBatteryAsync(BatteryBrandRequestDTO requestDTO);
+        Task<BaseResponse> UpdateBatteryAsync(UpdateBatteryBrandRequestDTO requestDTO);
+        Task<BaseResponse> DeleteBatteryAsync(Guid BrandBatteryId);
+        Task<BaseResponse> GetAllBatteryAsync();
+        Task<BaseResponse> GetBatteryByIdAsync(Guid BrandBatteryId);
 
     }
 }

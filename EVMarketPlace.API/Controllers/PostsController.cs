@@ -10,6 +10,7 @@ namespace EVMarketPlace.API.Controllers
     [ApiController]
     [Route("api/[controller]")]
     [Produces("application/json")]
+    [Authorize]
     public class PostsController : ControllerBase
     {
         private readonly IPostService _PostService;
@@ -18,87 +19,49 @@ namespace EVMarketPlace.API.Controllers
             _PostService = postService;
         }
 
-        // Lấy danh sách Post
-        //cancellationToken ct = default là để hủy tác vụ khi client ngắt request (ví dụ: đóng tab, timeout) giúp tiết kiệm tài nguyên.
-        [HttpGet]
-        public async Task<IActionResult> GetAll(CancellationToken ct = default)
-
+        [HttpPost("create-post-vehicle")]
+        public async Task<IActionResult> CreateVehiclePost([FromForm] PostCreateVehicleRequest request)
         {
-            var item = await _PostService.GetAllAsync(ct);
-            return Ok(item);
+            var response = await _PostService.CreateVehiclePostAsync(request);
+            return StatusCode(int.Parse(response.Status), response);
         }
-
-
-        //Lấy chi tiết Post theo id
-        [HttpGet("{id:guid}")]
-        public async Task<IActionResult> GetById([FromRoute] Guid id, CancellationToken ct = default)
+        [HttpPost("create-post-battery")]
+        public async Task<IActionResult> CreateBatteryPost([FromForm] PostCreateBatteryRequest request)
         {
-            var item = await _PostService.GetByIdAsync(id, ct);
-            return item is null ? NotFound() : Ok(item);
+            var response = await _PostService.CreateBatteryPostAsync(request);
+            return StatusCode(int.Parse(response.Status), response);
         }
-
-        // Tạo mới Post.
-        [Authorize] // Chỉ người dùng đã xác thực mới có thể tạo
-        [HttpPost]
-        public async Task<IActionResult> Create([FromBody] PostCreateRequest req, CancellationToken ct = default)
+        [HttpGet("Get-All-Post")]
+        public async Task<IActionResult> GetAllPosts()
         {
-            if (!ModelState.IsValid) return ValidationProblem(ModelState);
-            var created = await _PostService.CreateAsync(req, null, ct);
-            return CreatedAtAction(nameof(GetById), new { id = created.PostId }, created);
+            var response = await _PostService.GetAllPostsAsync();
+            return StatusCode(int.Parse(response.Status), response);
         }
-
-        // Cập nhật Post 
-        [Authorize] // Chỉ người dùng đã xác thực mới có thể cập nhật
-        [HttpPut("{id:guid}")]
-        public async Task<IActionResult> Update([FromRoute] Guid id, [FromBody] PostUpdateRequest req, CancellationToken ct = default)
+        [HttpGet("Get-Post-By-Id/{id}")]
+        public async Task<IActionResult> GetPostById([FromRoute] Guid id)
         {
-            req.PostId = id; // đồng bộ id từ route
-            try
-            {
-                var updated = await _PostService.UpdateAsync(req, ct);
-                return Ok(updated);
-            }
-            catch (KeyNotFoundException)// nếu Post không tồn tại
-
-            {
-                return NotFound();
-            }
-
-            catch (UnauthorizedAccessException) // nếu không phải chủ sở hữu
-            {
-                return Forbid(); // 403 Forbidden
-            }
+            var response = await _PostService.GetPostByIdAsync(id);
+            return StatusCode(int.Parse(response.Status), response);
         }
-
-        // Xóa Post theo id
-        [Authorize] // Chỉ người dùng đã xác thực mới có thể xóa
-        [HttpDelete("{id:guid}")]
-        public async Task<IActionResult> Delete([FromRoute] Guid id, CancellationToken ct = default)
+        [HttpPut("Update-Post-Battery")]
+        public async Task<IActionResult> UpdateBatteryPost([FromForm] UpdateBatteryPostRequest request)
         {
-            try
-            {
-                var ok = await _PostService.DeleteAsync(id, ct);
-                return ok ? Ok(new { deleted = true }) : NotFound();
-            }
-            catch (UnauthorizedAccessException) // nếu không phải chủ sở hữu
-            {
-                return Forbid(); // 403 Forbidden
-            }
+            var response = await _PostService.UpdateBatteryPostAsync(request);
+            return StatusCode(int.Parse(response.Status), response);
         }
-
-
-        // Tạo mới Post với hình ảnh (multipart/form-data)
-        [Authorize]
-        [HttpPost("form")]
-        [Consumes("multipart/form-data")]
-        [RequestSizeLimit(10_000_000)] // Giới hạn kích thước request (10MB)
-        public async Task<IActionResult> CreateWithImage([FromForm] PostCreateRequest req, IFormFile? image, CancellationToken ct = default)
+        [HttpPut("Update-Post-Vehicle")]
+        public async Task<IActionResult> UpdateVehiclePost([FromForm] UpdateVehiclePostRequest request)
         {
-            if (!ModelState.IsValid) return ValidationProblem(ModelState);
-            var created = await _PostService.CreateAsync(req, image, ct);
-            return CreatedAtAction(nameof(GetById), new { id = created.PostId }, created);
+            var response = await _PostService.UpdateVehiclePostAsync(request);
+            return StatusCode(int.Parse(response.Status), response);
         }
-
+        [HttpDelete("Delete-Post/{id}")]
+        public async Task<IActionResult> DeletePost([FromRoute] Guid id)
+        {
+            var response = await _PostService.DeletePostAsync(id);
+            return StatusCode(int.Parse(response.Status), response);
+        }
 
     }
 }
+

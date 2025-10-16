@@ -32,6 +32,7 @@ builder.Services.AddScoped<IPostService, PostService>();
 builder.Services.AddScoped<IBatteryBrandService, BatteryBrandService>();
 builder.Services.AddScoped<IVehicleBrandService, VehicleBrandService>();
 // Add resitory services
+builder.Services.AddScoped<PostImageRepository>();
 builder.Services.AddScoped<VehilceBrandRepository>();
 builder.Services.AddScoped<BatteryBrandRepository>();
 builder.Services.AddScoped<PostRepository>();

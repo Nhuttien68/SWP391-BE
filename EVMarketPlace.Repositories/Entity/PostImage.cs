@@ -7,11 +7,11 @@ public partial class PostImage
 {
     public Guid ImageId { get; set; }
 
-    public Guid PostId { get; set; }
+    public Guid? PostId { get; set; }
 
-    public string ImageUrl { get; set; } = null!;
+    public string? ImageUrl { get; set; }
 
-    public DateTime UploadedAt { get; set; }
+    public DateTime? UploadedAt { get; set; }
 
-    public virtual Post Post { get; set; } = null!;
+    public virtual Post? Post { get; set; }
 }

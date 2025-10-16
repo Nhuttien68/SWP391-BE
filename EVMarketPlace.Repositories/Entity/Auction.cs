@@ -7,17 +7,17 @@ public partial class Auction
 {
     public Guid AuctionId { get; set; }
 
-    public Guid PostId { get; set; }
+    public Guid? PostId { get; set; }
 
-    public decimal StartPrice { get; set; }
+    public decimal? StartPrice { get; set; }
 
-    public decimal CurrentPrice { get; set; }
+    public decimal? CurrentPrice { get; set; }
 
-    public DateTime EndTime { get; set; }
+    public DateTime? EndTime { get; set; }
 
-    public bool IsActive { get; set; }
+    public string? Status { get; set; }
 
     public virtual ICollection<AuctionBid> AuctionBids { get; set; } = new List<AuctionBid>();
 
-    public virtual Post Post { get; set; } = null!;
+    public virtual Post? Post { get; set; }
 }

@@ -9,6 +9,6 @@ namespace EVMarketPlace.Services.Interfaces
 {
     public  interface IWalletService
     {
-        Task<BaseRespone> CreateWallet();
+        Task<BaseResponse> CreateWallet();
     }
 }

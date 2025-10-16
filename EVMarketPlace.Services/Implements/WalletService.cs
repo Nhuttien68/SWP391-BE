@@ -22,7 +22,7 @@ namespace EVMarketPlace.Services.Implements
             _userUtility = userUtility;
             _walletRepository = walletRepository;
         }
-        public async Task<BaseRespone> CreateWallet()
+        public async Task<BaseResponse> CreateWallet()
         {
             var userId = _userUtility.GetUserIdFromToken();
             if (userId == Guid.Empty)
@@ -37,7 +37,7 @@ namespace EVMarketPlace.Services.Implements
                 LastUpdated = DateTime.UtcNow
             };
             await _walletRepository.CreateAsync(newWallet);
-            return new BaseRespone
+            return new BaseResponse
             {
                 Status = StatusCodes.Status201Created.ToString(),
                 Message = "Wallet created successfully.",
