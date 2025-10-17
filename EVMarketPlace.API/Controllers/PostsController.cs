@@ -31,7 +31,9 @@ namespace EVMarketPlace.API.Controllers
             var response = await _PostService.CreateBatteryPostAsync(request);
             return StatusCode(int.Parse(response.Status), response);
         }
+        
         [HttpGet("Get-All-Post")]
+        [AllowAnonymous]
         public async Task<IActionResult> GetAllPosts()
         {
             var response = await _PostService.GetAllPostsAsync();
