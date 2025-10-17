@@ -1,5 +1,6 @@
 ﻿using EVMarketPlace.Repositories.Entity;
 using EVMarketPlace.Repositories.Enum;
+using EVMarketPlace.Repositories.Exception;
 using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
@@ -34,5 +35,83 @@ namespace EVMarketPlace.Repositories.Repository
                 .ThenInclude(b => b.Brand)
                 .FirstOrDefaultAsync(p => p.PostId == postId);
         }
-     }
+        public async Task UpdateBatteryAsync(Post post)
+        {
+            var existingPost = await _context.Posts
+                .Include(p => p.Battery)
+                .Include(p => p.PostImages)
+                .FirstOrDefaultAsync(p => p.PostId == post.PostId);
+
+            if (existingPost == null)
+                throw new NotFoundException("Post not found");
+
+            // Gán từng trường và báo cho EF biết là có thay đổi
+            if (existingPost.Title != post.Title)
+                existingPost.Title = post.Title;
+
+            if (existingPost.Description != post.Description)
+                existingPost.Description = post.Description;
+
+            if (existingPost.Price != post.Price)
+                existingPost.Price = post.Price;
+
+            // Battery
+            if (existingPost.Battery != null && post.Battery != null)
+            {
+                existingPost.Battery.BrandId = post.Battery.BrandId;
+                existingPost.Battery.Capacity = post.Battery.Capacity;
+                existingPost.Battery.Condition = post.Battery.Condition;
+            }
+            else if (post.Battery != null)
+            {
+                post.Battery.PostId = existingPost.PostId;
+                await _context.Batteries.AddAsync(post.Battery);
+            }
+
+            // Force EF hiểu rằng entity này có thay đổi
+            _context.Entry(existingPost).State = EntityState.Modified;
+            if (existingPost.Battery != null)
+                _context.Entry(existingPost.Battery).State = EntityState.Modified;
+
+            await _context.SaveChangesAsync();
+        }
+        public async Task UpdateVehicleAsync(Post post)
+        {
+            var existingPost = await _context.Posts
+                .Include(p => p.Vehicle)
+                .Include(p => p.PostImages)
+                .FirstOrDefaultAsync(p => p.PostId == post.PostId);
+
+            if (existingPost == null)
+                throw new NotFoundException("Post not found");
+
+            // ==== Update Post ====
+            existingPost.Title = post.Title;
+            existingPost.Description = post.Description;
+            existingPost.Price = post.Price;
+
+            // ==== Update Vehicle ====
+            if (existingPost.Vehicle != null && post.Vehicle != null)
+            {
+                existingPost.Vehicle.BrandId = post.Vehicle.BrandId;
+                existingPost.Vehicle.Model = post.Vehicle.Model;
+                existingPost.Vehicle.Year = post.Vehicle.Year;
+                existingPost.Vehicle.Mileage = post.Vehicle.Mileage;
+
+                // Cái này rất quan trọng để EF hiểu rằng entity Vehicle đã thay đổi
+                _context.Entry(existingPost.Vehicle).State = EntityState.Modified;
+            }
+
+            // ==== Update ảnh nếu có ====
+            if (post.PostImages != null && post.PostImages.Any())
+            {
+                existingPost.PostImages = post.PostImages;
+            }
+
+            _context.Entry(existingPost).State = EntityState.Modified;
+            await _context.SaveChangesAsync();
+        }
+
+
+    }
 }

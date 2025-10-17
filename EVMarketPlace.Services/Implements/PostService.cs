@@ -82,7 +82,18 @@ namespace EVMarketPlace.Services.Implements
                 }
                 await _postRepository.CreateAsync(newPost);
                 // ✅ Map sang DTO
-                var postDto = await _postRepository.GetPostByIdWithImageAsync(newPost.PostId);
+                var postDto = new PostResponseDto
+                {
+                    PostId = newPost.PostId,
+                    UserId = newPost.UserId,
+                    Title = newPost.Title,
+                    Description = newPost.Description,
+                    Price = newPost.Price,
+                    Type = newPost.Type,
+                    CreatedAt = newPost.CreatedAt,
+                    Status = newPost.Status,
+                    ImageUrls = newPost.PostImages.Select(i => i.ImageUrl).ToList(),
+                };
                 return new BaseResponse
                 {
                     Status = StatusCodes.Status201Created.ToString(),
@@ -351,7 +362,7 @@ namespace EVMarketPlace.Services.Implements
 
                 await UpdatePostImagesAsync(post, request.KeepImageIds, request.NewImages);
 
-                await _postRepository.UpdateAsync(post);
+                await _postRepository.UpdateBatteryAsync(post);
                 return new BaseResponse
                 {
                     Status = StatusCodes.Status201Created.ToString(),
@@ -389,7 +400,7 @@ namespace EVMarketPlace.Services.Implements
                
                 await UpdatePostImagesAsync(post, request.KeepImageIds, request.NewImages);
 
-                await _postRepository.UpdateAsync(post);
+                await _postRepository.UpdateVehicleAsync(post);
                 return new BaseResponse
                 {
                     Status = StatusCodes.Status200OK.ToString(),
