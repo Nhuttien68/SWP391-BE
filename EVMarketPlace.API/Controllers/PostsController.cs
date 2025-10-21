@@ -69,6 +69,18 @@ namespace EVMarketPlace.API.Controllers
             var response = await _PostService.DeletePostAsync(id);
             return StatusCode(int.Parse(response.Status), response);
         }
+        [HttpGet("Get-All-Post-Pendding")]
+        public async Task<IActionResult> GetAllPostsPendding()
+        {
+            var response = await _PostService.GetAllPostWithPendding();
+            return StatusCode(int.Parse(response.Status), response);
+        }
+        [HttpPut("Approved-Post")]
+        public async Task<IActionResult> ApprovedPost(Guid postid)
+        {
+            var response = await _PostService.ApprovedStatus(postid);
+            return StatusCode(int.Parse(response.Status), response);
+        }
 
     }
 }

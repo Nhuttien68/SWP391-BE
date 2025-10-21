@@ -18,7 +18,8 @@ namespace EVMarketPlace.Services.Interfaces
         Task<BaseResponse> UpdateVehiclePostAsync(UpdateVehiclePostRequest request);
         Task<BaseResponse> UpdateBatteryPostAsync(UpdateBatteryPostRequest request);
         Task<BaseResponse> DeletePostAsync(Guid postId);
-
+        Task<BaseResponse> GetAllPostWithPendding();
+        Task<BaseResponse> ApprovedStatus(Guid PostId);
       
     }
 }

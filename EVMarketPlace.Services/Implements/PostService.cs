@@ -28,6 +28,26 @@ namespace EVMarketPlace.Services.Implements
             
         }
 
+        public async Task<BaseResponse> ApprovedStatus(Guid id)
+        {
+            var post = await _postRepository.GetByIdAsync(id);
+            if (post == null) {
+                return new BaseResponse
+                {
+                    Status = StatusCodes.Status404NotFound.ToString(),
+                    Message = "post not found"
+                };
+            }
+            post.Status = PostStatusEnum.APPROVED.ToString();
+            await _postRepository.UpdateAsync(post);
+            return new BaseResponse
+            {
+                Status = StatusCodes.Status200OK.ToString(),
+                Message = "change status post success",
+            };
+            
+        }
+
         public async Task<BaseResponse> CreateBatteryPostAsync(PostCreateBatteryRequest request)
         {
             try
@@ -271,6 +291,49 @@ namespace EVMarketPlace.Services.Implements
                 } : null
             }).ToList();
 
+            return new BaseResponse
+            {
+                Status = StatusCodes.Status200OK.ToString(),
+                Message = "Get all posts successfully.",
+                Data = response
+            };
+        }
+
+        public async Task<BaseResponse> GetAllPostWithPendding()
+        {
+            var posts = await _postRepository.GetAllPostWithPennding();
+            var response = posts.Select(p => new PostResponseDto
+            {
+                PostId = p.PostId,
+                UserId = p.UserId,
+                Title = p.Title,
+                Description = p.Description,
+                Price = p.Price,
+                Type = p.Type,
+                CreatedAt = p.CreatedAt,
+                Status = p.Status,
+                ImgId = p.PostImages?.Select(i => i.ImageId).ToList(),
+                ImageUrls = p.PostImages?.Select(i => i.ImageUrl).ToList(),
+
+                //  Nếu là bài đăng về xe
+                Vehicle = p.Vehicle != null ? new VehicleDto
+                {
+                    VehicleId = p.Vehicle.VehicleId,
+                    BrandName = p.Vehicle.Brand?.Name ?? "Unknown",
+                    Model = p.Vehicle.Model ?? "",
+                    Year = p.Vehicle.Year,
+                    Mileage = p.Vehicle.Mileage
+                } : null,
+
+                //  Nếu là bài đăng về pin
+                Battery = p.Battery != null ? new BatteryDto
+                {
+                    BatteryId = p.Battery.BatteryId,
+                    BrandName = p.Battery.Brand?.Name ?? "Unknown",
+                    Capacity = p.Battery.Capacity,
+                    Condition = p.Battery.Condition ?? ""
+                } : null
+            }).ToList();
             return new BaseResponse
             {
                 Status = StatusCodes.Status200OK.ToString(),

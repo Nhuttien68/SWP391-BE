@@ -122,6 +122,18 @@ namespace EVMarketPlace.Repositories.Repository
                 .Where(p => p.UserId == userId)
                 .ToListAsync();
         }
+        public async Task<IEnumerable<Post>> GetAllPostWithPennding()
+        {
+            return await _context.Posts
+               .Include(p => p.PostImages)
+               .Include(p => p.User)
+               .Include(p => p.Vehicle)
+               .ThenInclude(v => v.Brand)
+               .Include(p => p.Battery)
+               .ThenInclude(b => b.Brand)
+               .Where(p => p.Status == PostStatusEnum.PENNDING.ToString())
+               .ToListAsync();
+        }
 
     }
 }
