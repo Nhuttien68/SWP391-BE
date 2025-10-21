@@ -1,17 +1,18 @@
-﻿using EVMarketPlace.Repositories.Options;
+﻿using EVMarketPlace.Repositories.Entity;
+using EVMarketPlace.Repositories.Options;
 using EVMarketPlace.Repositories.Repository;
 using EVMarketPlace.Repositories.Utils;
+using EVMarketPlace.Services;
 using EVMarketPlace.Services.Implements;
 using EVMarketPlace.Services.Interfaces;
-using EVMarketPlace.Repositories.Entity;
+using FirebaseAdmin;
+using Google.Apis.Auth.OAuth2;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity.UI.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using System.Text;
-using FirebaseAdmin;
-using Google.Apis.Auth.OAuth2;
 
 
 var builder = WebApplication.CreateBuilder(args);
@@ -42,8 +43,9 @@ builder.Services.AddScoped<UserUtility>();
 builder.Services.AddHttpContextAccessor();
 // Add Firebase Storage Service
 builder.Services.AddScoped<FirebaseStorageService>();
-
-
+// Add VNPay Service
+builder.Services.Configure<VnPayConfig>(builder.Configuration.GetSection("VnPay"));
+builder.Services.AddScoped<VnPayService>();
 
 
 builder.Services.AddSwaggerGen(option =>
