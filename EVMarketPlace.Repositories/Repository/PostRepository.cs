@@ -111,7 +111,17 @@ namespace EVMarketPlace.Repositories.Repository
             _context.Entry(existingPost).State = EntityState.Modified;
             await _context.SaveChangesAsync();
         }
-
+        public async Task<IEnumerable<Post>> GetPostsByUserIdAsync(Guid userId)
+        {
+            return await _context.Posts
+                .Include(p => p.PostImages)
+                .Include(p => p.Vehicle)
+                .ThenInclude(v => v.Brand)
+                .Include(p => p.Battery)
+                .ThenInclude(b => b.Brand)
+                .Where(p => p.UserId == userId)
+                .ToListAsync();
+        }
 
     }
 }

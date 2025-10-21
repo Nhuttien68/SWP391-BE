@@ -14,6 +14,7 @@ namespace EVMarketPlace.Services.Interfaces
         Task<BaseResponse> CreateBatteryPostAsync(PostCreateBatteryRequest request);
         Task<BaseResponse> GetAllPostsAsync();
         Task<BaseResponse> GetPostByIdAsync(Guid postId);
+        Task<BaseResponse> GetPostByUserIdAsync();
         Task<BaseResponse> UpdateVehiclePostAsync(UpdateVehiclePostRequest request);
         Task<BaseResponse> UpdateBatteryPostAsync(UpdateBatteryPostRequest request);
         Task<BaseResponse> DeletePostAsync(Guid postId);

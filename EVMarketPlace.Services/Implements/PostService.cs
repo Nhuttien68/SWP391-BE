@@ -339,6 +339,65 @@ namespace EVMarketPlace.Services.Implements
             };
         }
 
+        public async Task<BaseResponse> GetPostByUserIdAsync()
+        {
+            try
+            {
+                var userId = _userUtility.GetUserIdFromToken();
+                if (userId == Guid.Empty)
+                    throw new UnauthorizedAccessException("User ID not found in token.");
+                var posts = await _postRepository.GetPostsByUserIdAsync(userId);
+                var response = posts.Select(p => new PostResponseDto
+                {
+                    PostId = p.PostId,
+                    UserId = p.UserId,
+                    Title = p.Title,
+                    Description = p.Description,
+                    Price = p.Price,
+                    Type = p.Type,
+                    CreatedAt = p.CreatedAt,
+                    Status = p.Status,
+                    ImgId = p.PostImages?.Select(i => i.ImageId).ToList(),
+                    ImageUrls = p.PostImages?.Select(i => i.ImageUrl).ToList(),
+
+                    //  Nếu là bài đăng về xe
+                    Vehicle = p.Vehicle != null ? new VehicleDto
+                    {
+                        VehicleId = p.Vehicle.VehicleId,
+                        BrandName = p.Vehicle.Brand?.Name ?? "Unknown",
+                        Model = p.Vehicle.Model ?? "",
+                        Year = p.Vehicle.Year,
+                        Mileage = p.Vehicle.Mileage
+                    } : null,
+
+                    //  Nếu là bài đăng về pin
+                    Battery = p.Battery != null ? new BatteryDto
+                    {
+                        BatteryId = p.Battery.BatteryId,
+                        BrandName = p.Battery.Brand?.Name ?? "Unknown",
+                        Capacity = p.Battery.Capacity,
+                        Condition = p.Battery.Condition ?? ""
+                    } : null
+                }).ToList();
+
+
+                return new BaseResponse
+                {
+                    Status = StatusCodes.Status200OK.ToString(),
+                    Message = "Get post successfully.",
+                    Data = response
+                };
+            }
+            catch (Exception ex)
+            {
+                return new BaseResponse
+                {
+                    Status = StatusCodes.Status500InternalServerError.ToString(),
+                    Message = $"Error: {ex.Message}"
+                };
+            }
+        }
+
         public async Task<BaseResponse> UpdateBatteryPostAsync(UpdateBatteryPostRequest request)
         {
             try

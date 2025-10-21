@@ -45,6 +45,12 @@ namespace EVMarketPlace.API.Controllers
             var response = await _PostService.GetPostByIdAsync(id);
             return StatusCode(int.Parse(response.Status), response);
         }
+        [HttpGet("Get-Posts-By-UserId")]
+        public async Task<IActionResult> GetPostsByUserId()
+        {
+            var response = await _PostService.GetPostByUserIdAsync();
+            return StatusCode(int.Parse(response.Status), response);
+        }
         [HttpPut("Update-Post-Battery")]
         public async Task<IActionResult> UpdateBatteryPost([FromForm] UpdateBatteryPostRequest request)
         {
