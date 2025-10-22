@@ -1,17 +1,18 @@
-﻿using EVMarketPlace.Repositories.Options;
+﻿using EVMarketPlace.Repositories.Entity;
+using EVMarketPlace.Repositories.Options;
 using EVMarketPlace.Repositories.Repository;
 using EVMarketPlace.Repositories.Utils;
+using EVMarketPlace.Services;
 using EVMarketPlace.Services.Implements;
 using EVMarketPlace.Services.Interfaces;
-using EVMarketPlace.Repositories.Entity;
+using FirebaseAdmin;
+using Google.Apis.Auth.OAuth2;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity.UI.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using System.Text;
-using FirebaseAdmin;
-using Google.Apis.Auth.OAuth2;
 
 
 var builder = WebApplication.CreateBuilder(args);
@@ -44,9 +45,18 @@ builder.Services.AddScoped<FavoriteRepositori>();
 builder.Services.AddHttpContextAccessor();
 // Add Firebase Storage Service
 builder.Services.AddScoped<FirebaseStorageService>();
+// Add VNPay Service
+builder.Services.Configure<VnPayConfig>(builder.Configuration.GetSection("VnPay"));
+builder.Services.AddScoped<IPaymentService, PaymentService>();
 
-
-
+// Add session services
+builder.Services.AddDistributedMemoryCache();
+builder.Services.AddSession(options =>
+{
+    options.IdleTimeout = TimeSpan.FromMinutes(20);
+    options.Cookie.HttpOnly = true;
+    options.Cookie.IsEssential = true;
+});
 
 builder.Services.AddSwaggerGen(option =>
 {
@@ -133,6 +143,10 @@ app.UseHttpsRedirection();
 // Áp dụng CORS policy
 app.UseCors("AllowAll");
 
+// ✅ Thêm middleware
+app.UseSession();
+
+app.UseRouting();
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
