@@ -45,8 +45,16 @@ builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<FirebaseStorageService>();
 // Add VNPay Service
 builder.Services.Configure<VnPayConfig>(builder.Configuration.GetSection("VnPay"));
-builder.Services.AddScoped<VnPayService>();
+builder.Services.AddScoped<IPaymentService, PaymentService>();
 
+// Add session services
+builder.Services.AddDistributedMemoryCache();
+builder.Services.AddSession(options =>
+{
+    options.IdleTimeout = TimeSpan.FromMinutes(20);
+    options.Cookie.HttpOnly = true;
+    options.Cookie.IsEssential = true;
+});
 
 builder.Services.AddSwaggerGen(option =>
 {
@@ -133,6 +141,10 @@ app.UseHttpsRedirection();
 // Áp dụng CORS policy
 app.UseCors("AllowAll");
 
+// ✅ Thêm middleware
+app.UseSession();
+
+app.UseRouting();
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();

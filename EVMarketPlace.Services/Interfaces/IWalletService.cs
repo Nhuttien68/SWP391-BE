@@ -1,14 +1,16 @@
 ﻿using EVMarketPlace.Repositories.ResponseDTO;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace EVMarketPlace.Services.Interfaces
 {
-    public  interface IWalletService
+    public interface IWalletService
     {
-        Task<BaseResponse> CreateWallet();
+        Task<BaseResponse> CreateWalletAsync();
+        Task<BaseResponse> GetWalletAsync();
+
+        // Nạp tiền vào ví (dùng cho VNPay callback)
+        Task<BaseResponse> TopUpWalletAsync(decimal amount, string transactionId, string paymentMethod, Guid userId);
+
+        Task<BaseResponse> WithdrawWalletAsync(decimal amount);
+        Task<decimal> GetBalanceAsync();
     }
 }

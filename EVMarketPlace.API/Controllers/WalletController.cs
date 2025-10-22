@@ -1,24 +1,60 @@
-﻿using EVMarketPlace.Repositories.ResponseDTO;
-using EVMarketPlace.Services.Interfaces;
-using Microsoft.AspNetCore.Http;
+﻿using EVMarketPlace.Services.Interfaces;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace EVMarketPlace.API.Controllers
 {
-    [Route("api/[controller]")]
     [ApiController]
+    [Route("api/[controller]")]
+    [Produces("application/json")]
+    [Authorize]
     public class WalletController : ControllerBase
     {
         private readonly IWalletService _walletService;
 
-        public WalletController( IWalletService walletService)
+        public WalletController(IWalletService walletService)
         {
             _walletService = walletService;
         }
-        [HttpPost("create-wallet")]
-        public async Task<BaseResponse> CreateWallet()
+
+        /// <summary>
+        /// Tạo ví mới
+        /// </summary>
+        [HttpPost("create")]
+        public async Task<IActionResult> CreateWallet()
         {
-            return await _walletService.CreateWallet();
+            var response = await _walletService.CreateWalletAsync();
+            return StatusCode(int.Parse(response.Status), response);
+        }
+
+        /// <summary>
+        /// Lấy thông tin ví
+        /// </summary>
+        [HttpGet("info")]
+        public async Task<IActionResult> GetWallet()
+        {
+            var response = await _walletService.GetWalletAsync();
+            return StatusCode(int.Parse(response.Status), response);
+        }
+
+        /// <summary>
+        /// Rút tiền từ ví
+        /// </summary>
+        [HttpPost("withdraw")]
+        public async Task<IActionResult> Withdraw([FromQuery] decimal amount)
+        {
+            var response = await _walletService.WithdrawWalletAsync(amount);
+            return StatusCode(int.Parse(response.Status), response);
+        }
+
+        /// <summary>
+        /// Lấy balance hiện tại
+        /// </summary>
+        [HttpGet("balance")]
+        public async Task<IActionResult> GetBalance()
+        {
+            var balance = await _walletService.GetBalanceAsync();
+            return Ok(new { balance });
         }
     }
 }

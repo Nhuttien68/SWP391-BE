@@ -1,14 +1,16 @@
 ﻿namespace EVMarketPlace.Services
 {
+    /// <summary>
+    /// Cấu hình VNPay
+    /// </summary>
     public class VnPayConfig
     {
         public string TmnCode { get; set; } = string.Empty;
         public string HashSecret { get; set; } = string.Empty;
         public string Url { get; set; } = string.Empty;
         public string ReturnUrl { get; set; } = string.Empty;
-        public string IpnUrl { get; set; } = string.Empty;
 
-        //  Thêm các properties bị thiếu
+        // ✅ Default values
         public string Version { get; set; } = "2.1.0";
         public string Command { get; set; } = "pay";
         public string CurrCode { get; set; } = "VND";

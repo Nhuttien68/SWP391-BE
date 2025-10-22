@@ -1,4 +1,4 @@
-﻿using EVMarketPlace.Services.Implements;
+﻿using EVMarketPlace.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -9,49 +9,39 @@ namespace EVMarketPlace.API.Controllers
     [Produces("application/json")]
     public class PaymentController : ControllerBase
     {
-        private readonly VnPayService _vnPayService;
+        private readonly IPaymentService _paymentService;
 
-        public PaymentController(VnPayService vnPayService)
+        public PaymentController(IPaymentService paymentService)
         {
-            _vnPayService = vnPayService;
+            _paymentService = paymentService;
         }
 
         /// <summary>
         /// Tạo URL thanh toán VNPay
+        /// Frontend gọi endpoint này để lấy payment URL
         /// </summary>
-        /// <param name="amount">Số tiền thanh toán (VND)</param>
-        /// <param name="info">Thông tin đơn hàng</param>
-        /// <param name="orderId">Mã đơn hàng (optional)</param>
         [HttpGet("create")]
         [Authorize]
-        public IActionResult CreatePayment(
+        public async Task<IActionResult> CreatePayment(
             [FromQuery] decimal amount,
             [FromQuery] string info,
             [FromQuery] string? orderId = null)
         {
-            var response = _vnPayService.CreatePaymentUrl(HttpContext, amount, info, orderId);
+            var response = await _paymentService.CreatePaymentUrlAsync(HttpContext, amount, info, orderId);
             return StatusCode(int.Parse(response.Status), response);
         }
 
         /// <summary>
-        /// VNPay redirect callback
+        /// VNPay redirect callback (AUTO - Không cần gọi từ Frontend)
+        /// VNPay tự động redirect về endpoint này sau thanh toán
+        /// HIDDEN từ Swagger - Chỉ để test với VNPay
         /// </summary>
         [HttpGet("return")]
         [AllowAnonymous]
-        public IActionResult PaymentReturn()
+        [ApiExplorerSettings(IgnoreApi = true)]  // ẨN khỏi Swagger
+        public async Task<IActionResult> PaymentReturn()
         {
-            var response = _vnPayService.ProcessPaymentReturn(Request.Query);
-            return StatusCode(int.Parse(response.Status), response);
-        }
-
-        /// <summary>
-        /// VNPay IPN callback (server-to-server) - VNPay gọi trực tiếp
-        /// </summary>
-        [HttpGet("ipn")]
-        [AllowAnonymous]
-        public IActionResult PaymentIpn()
-        {
-            var response = _vnPayService.ProcessIpnCallback(Request.Query);
+            var response = await _paymentService.ProcessPaymentReturnAsync(Request.Query, HttpContext);
             return StatusCode(int.Parse(response.Status), response);
         }
     }
