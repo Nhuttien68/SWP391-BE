@@ -31,6 +31,7 @@ builder.Services.AddScoped<IWalletService, WalletService>();
 builder.Services.AddScoped<IPostService, PostService>();
 builder.Services.AddScoped<IBatteryBrandService, BatteryBrandService>();
 builder.Services.AddScoped<IVehicleBrandService, VehicleBrandService>();
+builder.Services.AddScoped<IFavoriteService, FavoriteService>();
 // Add resitory services
 builder.Services.AddScoped<PostImageRepository>();
 builder.Services.AddScoped<VehilceBrandRepository>();
@@ -39,6 +40,7 @@ builder.Services.AddScoped<PostRepository>();
 builder.Services.AddScoped<UserRepository>();
 builder.Services.AddScoped<WalletRepository>();
 builder.Services.AddScoped<UserUtility>();
+builder.Services.AddScoped<FavoriteRepositori>();
 builder.Services.AddHttpContextAccessor();
 // Add Firebase Storage Service
 builder.Services.AddScoped<FirebaseStorageService>();
