@@ -17,8 +17,6 @@ public partial class Review
 
     public DateTime? CreatedAt { get; set; }
 
-    public string? Status { get; set; }
-
     public virtual User? Reviewer { get; set; }
 
     public virtual Transaction? Transaction { get; set; }

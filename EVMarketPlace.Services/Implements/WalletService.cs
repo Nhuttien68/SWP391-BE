@@ -53,7 +53,6 @@ namespace EVMarketPlace.Services.Implements
                     WalletId = Guid.NewGuid(),
                     UserId = userId,
                     Balance = 0,
-                    Status = "ACTIVE",
                     LastUpdated = DateTime.UtcNow
                 };
 
@@ -195,9 +194,6 @@ namespace EVMarketPlace.Services.Implements
                 if (wallet == null)
                     return CreateResponse(StatusCodes.Status404NotFound, "Không tìm thấy ví. Vui lòng tạo ví trước.");
 
-                if (wallet.Status != "ACTIVE")
-                    return CreateResponse(StatusCodes.Status400BadRequest, "Ví không ở trạng thái hoạt động.");
-
                 var oldBalance = wallet.Balance ?? 0;
                 var (success, newBalance) = await _walletRepository.TryUpdateBalanceAsync(wallet.WalletId, amount);
 
@@ -239,7 +235,6 @@ namespace EVMarketPlace.Services.Implements
                 UserId = wallet.UserId ?? Guid.Empty,
                 Balance = wallet.Balance ?? 0,
                 LastUpdated = wallet.LastUpdated,
-                Status = wallet.Status
             };
         }
 

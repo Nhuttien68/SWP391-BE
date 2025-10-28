@@ -31,7 +31,7 @@ namespace EVMarketPlace.API.Controllers
             var response = await _PostService.CreateBatteryPostAsync(request);
             return StatusCode(int.Parse(response.Status), response);
         }
-        
+
         [HttpGet("Get-All-Post")]
         [AllowAnonymous]
         public async Task<IActionResult> GetAllPosts()
@@ -76,12 +76,21 @@ namespace EVMarketPlace.API.Controllers
             return StatusCode(int.Parse(response.Status), response);
         }
         [HttpPut("Approved-Post")]
+        [Authorize(Roles = "ADMIN")]
         public async Task<IActionResult> ApprovedPost(Guid postid)
         {
             var response = await _PostService.ApprovedStatus(postid);
             return StatusCode(int.Parse(response.Status), response);
         }
+        [HttpPut("Reject-Post")]
+        [Authorize(Roles = "ADMIN")]
 
+        public async Task<IActionResult> RejectPost(Guid postid)
+        {
+            var response = await _PostService.RejectStatusAsync(postid);
+            return StatusCode(int.Parse(response.Status), response);
+
+        }
     }
 }
 

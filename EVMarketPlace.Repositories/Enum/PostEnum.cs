@@ -14,6 +14,7 @@ namespace EVMarketPlace.Repositories.Enum
     public enum PostStatusEnum
     {
         PENNDING,
+        REJECTED,
         APPROVED,
         SOLD,
         DELETED

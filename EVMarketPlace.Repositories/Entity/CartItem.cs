@@ -11,6 +11,8 @@ public partial class CartItem
 
     public Guid? PostId { get; set; }
 
+    public int? Quantity { get; set; }
+
     public DateTime? AddedAt { get; set; }
 
     public virtual ShoppingCart? Cart { get; set; }

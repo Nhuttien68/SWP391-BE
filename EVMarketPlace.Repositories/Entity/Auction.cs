@@ -17,7 +17,11 @@ public partial class Auction
 
     public string? Status { get; set; }
 
+    public Guid? WinnerId { get; set; }
+
     public virtual ICollection<AuctionBid> AuctionBids { get; set; } = new List<AuctionBid>();
 
     public virtual Post? Post { get; set; }
+
+    public virtual User? Winner { get; set; }
 }

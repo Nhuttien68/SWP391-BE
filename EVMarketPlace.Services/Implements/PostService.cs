@@ -18,18 +18,47 @@ namespace EVMarketPlace.Services.Implements
     {
         private readonly PostRepository _postRepository;
         private readonly UserUtility _userUtility;
+        private readonly WalletRepository _walletRepository;
         private readonly FirebaseStorageService _firebaseStorage;
         
-        public PostService( PostRepository postRepository , UserUtility userUtility, FirebaseStorageService firebaseStorage, PostImageRepository postImageRepository)
+        public PostService(WalletRepository walletRepositpry, PostRepository postRepository , UserUtility userUtility, FirebaseStorageService firebaseStorage, PostImageRepository postImageRepository)
         {
             _postRepository = postRepository;
             _userUtility = userUtility;
             _firebaseStorage = firebaseStorage;
-            
+            _walletRepository = walletRepositpry;
         }
 
         public async Task<BaseResponse> ApprovedStatus(Guid id)
         {
+            var adminUserId = _userUtility.GetUserIdFromToken();
+            if (adminUserId == Guid.Empty)
+            {
+                return new BaseResponse
+                {
+                    Status = StatusCodes.Status401Unauthorized.ToString(),
+                    Message = "Unauthorized: admin user id not found"
+                };
+            }
+            var adminWallet = await _walletRepository.GetWalletByUserIdAsync(adminUserId);
+            if (adminWallet == null)
+            {
+                return new BaseResponse
+                {
+                    Status = StatusCodes.Status500InternalServerError.ToString(),
+                    Message = "Admin wallet not found"
+                };
+            }
+
+            var walletResult = await _walletRepository.TryUpdateBalanceAsync(adminWallet.WalletId, 100000);
+            if (!walletResult.Success)
+            {
+                return new BaseResponse
+                {
+                    Status = StatusCodes.Status500InternalServerError.ToString(),
+                    Message = "Failed to credit admin wallet"
+                };
+            }
             var post = await _postRepository.GetByIdAsync(id);
             if (post == null) {
                 return new BaseResponse
@@ -55,6 +84,20 @@ namespace EVMarketPlace.Services.Implements
                 var userId = _userUtility.GetUserIdFromToken();
                 if (userId == Guid.Empty)
                     throw new UnauthorizedAccessException("User ID not found in token.");
+                var wallet = await _walletRepository.GetWalletByUserIdAsync(userId);
+                if (wallet == null)
+                    throw new Exception("Wallet not found for the user.");
+                var walletResult = await _walletRepository.TryUpdateBalanceAsync(wallet.WalletId, -100000);
+
+                if (!walletResult.Success)
+                {
+                    return new BaseResponse
+                    {
+                        Status = "400",
+                        Message = "Số dư ví không đủ để đăng bài.",
+                        Data = null
+                    };
+                }
                 var newPost = new Post
                 {
                     PostId = Guid.NewGuid(),
@@ -135,10 +178,24 @@ namespace EVMarketPlace.Services.Implements
         {
             try
             {
+                
                 var userId =  _userUtility.GetUserIdFromToken();
                 if (userId == Guid.Empty)
                     throw new UnauthorizedAccessException("User ID not found in token.");
+                var wallet = await _walletRepository.GetWalletByUserIdAsync(userId);
+                if (wallet == null)
+                    throw new Exception("Wallet not found for the user.");
+                var walletResult = await _walletRepository.TryUpdateBalanceAsync(wallet.WalletId, -100000);
 
+                if (!walletResult.Success)
+                {
+                    return new BaseResponse
+                    {
+                        Status = "400",
+                        Message = "Số dư ví không đủ để đăng bài.",
+                        Data = null
+                    };
+                }
                 var newPost = new Post
                 {
                     PostId = Guid.NewGuid(),
@@ -449,6 +506,67 @@ namespace EVMarketPlace.Services.Implements
                     Status = StatusCodes.Status200OK.ToString(),
                     Message = "Get post successfully.",
                     Data = response
+                };
+            }
+            catch (Exception ex)
+            {
+                return new BaseResponse
+                {
+                    Status = StatusCodes.Status500InternalServerError.ToString(),
+                    Message = $"Error: {ex.Message}"
+                };
+            }
+        }
+
+        public async Task<BaseResponse> RejectStatusAsync(Guid PostId)
+        {
+            try
+            {
+                var post = await _postRepository.GetByIdAsync(PostId);
+                if (post == null)
+                {
+                    return new BaseResponse
+                    {
+                        Status = StatusCodes.Status404NotFound.ToString(),
+                        Message = "Post not found."
+                    };
+                }
+                post.Status = PostStatusEnum.REJECTED.ToString();
+                await _postRepository.UpdateAsync(post);
+                if (post.UserId == null || post.UserId == Guid.Empty)
+                {
+                    return new BaseResponse
+                    {
+                        Status = StatusCodes.Status500InternalServerError.ToString(),
+                        Message = "UserId of post is invalid."
+                    };
+                }
+
+                var userWallet = await _walletRepository.GetWalletByUserIdAsync(post.UserId.Value);
+                if (userWallet == null)
+                {
+                    return new BaseResponse
+                    {
+                        Status = StatusCodes.Status500InternalServerError.ToString(),
+                        Message = "User wallet not found."
+                    };
+                }
+
+                var walletResult = await _walletRepository.TryUpdateBalanceAsync(userWallet.WalletId, 100000m);
+                if (!walletResult.Success)
+                {
+                    return new BaseResponse
+                    {
+                        Status = StatusCodes.Status500InternalServerError.ToString(),
+                        Message = "Failed to refund user wallet."
+                    };
+                }
+
+                return new BaseResponse
+                {
+                    Status = StatusCodes.Status200OK.ToString(),
+                    Message = "Post rejected and 100,000 refunded to user.",
+                    Data = new { UserNewBalance = walletResult.NewBalance }
                 };
             }
             catch (Exception ex)

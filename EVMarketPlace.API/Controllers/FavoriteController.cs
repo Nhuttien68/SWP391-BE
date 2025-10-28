@@ -30,5 +30,17 @@ namespace EVMarketPlace.API.Controllers
             return StatusCode(int.Parse(response.Status), response);
 
         }
+        [HttpGet("getbyid/{favoriteId:guid}")]
+        public async Task<IActionResult> GetById([FromRoute] Guid favoriteId)
+        {
+            var response = await _favoriteService.GetById(favoriteId);
+            return StatusCode(int.Parse(response.Status), response);
+        }
+        [HttpGet("getall")]
+        public async Task<IActionResult> GetAllFavorite()
+        {
+            var response = await _favoriteService.GetAllFavorite();
+            return StatusCode(int.Parse(response.Status), response);
+        }
     }
 }

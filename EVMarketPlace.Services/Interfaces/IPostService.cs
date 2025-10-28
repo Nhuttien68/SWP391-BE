@@ -20,6 +20,7 @@ namespace EVMarketPlace.Services.Interfaces
         Task<BaseResponse> DeletePostAsync(Guid postId);
         Task<BaseResponse> GetAllPostWithPendding();
         Task<BaseResponse> ApprovedStatus(Guid PostId);
-      
+        Task<BaseResponse> RejectStatusAsync(Guid PostId);
+
     }
 }

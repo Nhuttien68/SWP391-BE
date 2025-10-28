@@ -17,7 +17,7 @@ namespace EVMarketPlace.Repositories.Repository
         {
             return await _context.Wallets
                 .AsNoTracking()
-                .FirstOrDefaultAsync(w => w.UserId == userId && w.Status != "DELETED");
+                .FirstOrDefaultAsync(w => w.UserId == userId );
         }
 
         /// <summary>
@@ -27,7 +27,7 @@ namespace EVMarketPlace.Repositories.Repository
         {
             return await _context.Wallets
                 .AsNoTracking()
-                .FirstOrDefaultAsync(w => w.WalletId == walletId && w.Status != "DELETED");
+                .FirstOrDefaultAsync(w => w.WalletId == walletId);
         }
 
         /// <summary>
@@ -40,7 +40,7 @@ namespace EVMarketPlace.Repositories.Repository
             try
             {
                 var wallet = await _context.Wallets
-                    .FirstOrDefaultAsync(w => w.WalletId == walletId && w.Status != "DELETED");
+                    .FirstOrDefaultAsync(w => w.WalletId == walletId);
 
                 if (wallet == null)
                     return (false, 0);
@@ -73,7 +73,7 @@ namespace EVMarketPlace.Repositories.Repository
         public async Task<bool> WalletExistsAsync(Guid userId)
         {
             return await _context.Wallets
-                .AnyAsync(w => w.UserId == userId && w.Status != "DELETED");
+                .AnyAsync(w => w.UserId == userId);
         }
 
         /// <summary>

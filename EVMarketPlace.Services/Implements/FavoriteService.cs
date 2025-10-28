@@ -48,9 +48,9 @@ namespace EVMarketPlace.Services.Implements
             };
         }
 
-        public async Task<BaseResponse> deleteFavorite(Guid reviewId)
+        public async Task<BaseResponse> deleteFavorite(Guid favoriteId)
         {
-            var favorite = await _favoriteRepositori.GetByIdAsync(reviewId);
+            var favorite = await _favoriteRepositori.GetByIdAsync(favoriteId);
             if (favorite == null)
             {
                 return new BaseResponse
@@ -67,6 +67,81 @@ namespace EVMarketPlace.Services.Implements
             };
         }
 
-      
+        public async Task<BaseResponse> GetAllFavorite()
+        {
+            var userId = _userUtility.GetUserIdFromToken();
+            if (userId == null)
+            {
+                return new BaseResponse
+                {
+                    Status = StatusCodes.Status401Unauthorized.ToString(),
+                    Message = "User not authenticated"
+                };
+            }
+
+            var favorites = await _favoriteRepositori.GetAllFavoriteWithPostInforAsync(userId);
+               
+
+            if (favorites == null || !favorites.Any())
+            {
+                return new BaseResponse
+                {
+                    Status = StatusCodes.Status404NotFound.ToString(),
+                    Message = "No favorites found"
+                };
+            }
+
+            var data = favorites.Select(f => new
+            {
+                f.FavoriteId,
+                f.CreatedAt,
+                Post = new
+                {
+                    f.Post.PostId,
+                    f.Post.Title,
+                    f.Post.Price,
+                    f.Post.Status,
+                    Images = f.Post.PostImages.Select(i => i.ImageUrl).ToList()
+                }
+            }).ToList();
+
+            return new BaseResponse
+            {
+                Status = StatusCodes.Status200OK.ToString(),
+                Message = "Get favorites success",
+                Data = data
+            };
+        }
+
+        public async Task<BaseResponse> GetById(Guid favoriteId)
+        {
+            var userId = _userUtility.GetUserIdFromToken();
+            if (userId == null)
+            {
+                return new BaseResponse
+                {
+                    Status = StatusCodes.Status401Unauthorized.ToString(),
+                    Message = "User not found"
+                };
+            }
+
+            var favorite = await _favoriteRepositori.GetFavoriteByIdAsync(userId, favoriteId);
+
+            if (favorite == null)
+            {
+                return new BaseResponse
+                {
+                    Status = StatusCodes.Status404NotFound.ToString(),
+                    Message = "Favorite not found"
+                };
+            }
+
+            return new BaseResponse
+            {
+                Status = StatusCodes.Status200OK.ToString(),
+                Message = "Get favorite successfully",
+                Data = favorite
+            };
+        }
     }
 }

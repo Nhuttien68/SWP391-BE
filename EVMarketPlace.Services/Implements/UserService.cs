@@ -60,9 +60,9 @@ namespace EVMarketPlace.Services.Implements
 
         public async Task<BaseResponse> CreateAccount(CreateAccountRequest request)
         {
-            var existingUser = await _userRepository.GetByEmailAsync(request.Email);
-            if (existingUser != null)
-                throw new NotFoundException("Email đã được đăng ký.");
+            //var existingUser = await _userRepository.GetByEmailAsync(request.Email);
+            //if (existingUser != null)
+            //    throw new NotFoundException("Email đã được đăng ký.");
 
             var user = new User
             {

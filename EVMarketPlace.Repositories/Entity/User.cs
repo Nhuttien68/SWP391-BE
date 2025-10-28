@@ -7,13 +7,13 @@ public partial class User
 {
     public Guid UserId { get; set; }
 
-    public string? FullName { get; set; }
+    public string FullName { get; set; } = null!;
 
-    public string? Email { get; set; }
+    public string Email { get; set; } = null!;
 
     public string? Phone { get; set; }
 
-    public string? PasswordHash { get; set; }
+    public string PasswordHash { get; set; } = null!;
 
     public string? Role { get; set; }
 
@@ -22,6 +22,8 @@ public partial class User
     public string? Status { get; set; }
 
     public virtual ICollection<AuctionBid> AuctionBids { get; set; } = new List<AuctionBid>();
+
+    public virtual ICollection<Auction> Auctions { get; set; } = new List<Auction>();
 
     public virtual ICollection<Favorite> Favorites { get; set; } = new List<Favorite>();
 

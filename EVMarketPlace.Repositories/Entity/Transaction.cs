@@ -21,9 +21,13 @@ public partial class Transaction
 
     public DateTime? CreatedAt { get; set; }
 
-    public string? ContractFile { get; set; }
+    public string? ReceiverName { get; set; }
 
-    public DateTime? SignedAt { get; set; }
+    public string? ReceiverPhone { get; set; }
+
+    public string? ReceiverAddress { get; set; }
+
+    public string? Note { get; set; }
 
     public virtual User? Buyer { get; set; }
 
