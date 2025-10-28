@@ -4,6 +4,7 @@ using EVMarketPlace.Repositories.ResponseDTO;
 using EVMarketPlace.Repositories.Utils;
 using EVMarketPlace.Services.Interfaces;
 using Microsoft.AspNetCore.Http;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
 namespace EVMarketPlace.Services.Implements
@@ -256,6 +257,54 @@ namespace EVMarketPlace.Services.Implements
                 Message = message
             };
         }
+        public async Task<BaseResponse> DeductAsync(Guid userId, decimal amount)
+        {
+            try
+            {
+                if (userId == Guid.Empty)
+                    return CreateResponse(StatusCodes.Status400BadRequest, "UserId không hợp lệ.");
+
+                if (amount <= 0)
+                    return CreateResponse(StatusCodes.Status400BadRequest, "Số tiền trừ phải lớn hơn 0.");
+
+                var wallet = await _walletRepository.GetWalletByUserIdAsync(userId);
+                if (wallet == null)
+                {
+                    _logger.LogWarning("❌ Deduct: Wallet not found for UserId={UserId}", userId);
+                    return CreateResponse(StatusCodes.Status404NotFound, "Không tìm thấy ví người dùng.");
+                }
+
+                var currentBalance = wallet.Balance ?? 0;
+                if (currentBalance < amount)
+                {
+                    _logger.LogWarning("❌ Deduct: Insufficient balance. Current={Balance}, Required={Amount}", currentBalance, amount);
+                    return CreateResponse(StatusCodes.Status400BadRequest, $"Số dư không đủ. Hiện có {currentBalance:N0} VNĐ.");
+                }
+
+                var (success, newBalance) = await _walletRepository.TryUpdateBalanceAsync(wallet.WalletId, -amount);
+                if (!success)
+                {
+                    _logger.LogWarning("⚠️ Deduct: Failed to update balance for WalletId={WalletId}", wallet.WalletId);
+                    return CreateErrorResponse("Trừ tiền thất bại. Vui lòng thử lại.");
+                }
+
+                _logger.LogInformation("✅ Deduct: Success. UserId={UserId}, Amount={Amount}, Old={OldBalance}, New={NewBalance}",
+                    userId, amount, currentBalance, newBalance);
+
+                return CreateResponse(StatusCodes.Status200OK, "Trừ tiền thành công.", new
+                {
+                    OldBalance = currentBalance,
+                    NewBalance = newBalance,
+                    DeductedAmount = amount
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "❌ Deduct: Error");
+                return CreateErrorResponse($"Lỗi trừ tiền: {ex.Message}");
+            }
+        }
+
 
         #endregion
     }

@@ -12,5 +12,6 @@ namespace EVMarketPlace.Services.Interfaces
 
         Task<BaseResponse> WithdrawWalletAsync(decimal amount);
         Task<decimal> GetBalanceAsync();
+        Task<BaseResponse> DeductAsync(Guid userId, decimal amount);
     }
 }

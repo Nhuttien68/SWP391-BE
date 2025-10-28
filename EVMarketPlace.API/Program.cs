@@ -33,7 +33,10 @@ builder.Services.AddScoped<IPostService, PostService>();
 builder.Services.AddScoped<IBatteryBrandService, BatteryBrandService>();
 builder.Services.AddScoped<IVehicleBrandService, VehicleBrandService>();
 builder.Services.AddScoped<IFavoriteService, FavoriteService>();
+builder.Services.AddScoped<IAuctionService, AuctionService>();
 // Add resitory services
+builder.Services.AddScoped<AuctionRepository>();
+builder.Services.AddScoped<TransactionRepository>();
 builder.Services.AddScoped<PostImageRepository>();
 builder.Services.AddScoped<VehilceBrandRepository>();
 builder.Services.AddScoped<BatteryBrandRepository>();
@@ -48,7 +51,8 @@ builder.Services.AddScoped<FirebaseStorageService>();
 // Add VNPay Service
 builder.Services.Configure<VnPayConfig>(builder.Configuration.GetSection("VnPay"));
 builder.Services.AddScoped<IPaymentService, PaymentService>();
-
+// Add Auction Background Service
+builder.Services.AddHostedService<AuctionBackgroundService>();
 // Add session services
 builder.Services.AddDistributedMemoryCache();
 builder.Services.AddSession(options =>
