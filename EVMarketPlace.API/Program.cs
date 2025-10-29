@@ -25,7 +25,7 @@ builder.Services.AddEndpointsApiExplorer();
 
 
 builder.Services.AddMemoryCache();
-builder.Services.AddScoped<IEmailSender,EmailSender>();
+builder.Services.AddScoped<IEmailSender, EmailSender>();
 builder.Services.AddScoped<IOtpService, OtpService>();
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IWalletService, WalletService>();
@@ -34,6 +34,8 @@ builder.Services.AddScoped<IBatteryBrandService, BatteryBrandService>();
 builder.Services.AddScoped<IVehicleBrandService, VehicleBrandService>();
 builder.Services.AddScoped<IFavoriteService, FavoriteService>();
 builder.Services.AddScoped<IAuctionService, AuctionService>();
+// Add Cart Service
+builder.Services.AddScoped<ICartService, CartService>();
 // Add resitory services
 builder.Services.AddScoped<AuctionRepository>();
 builder.Services.AddScoped<TransactionRepository>();
@@ -45,6 +47,9 @@ builder.Services.AddScoped<UserRepository>();
 builder.Services.AddScoped<WalletRepository>();
 builder.Services.AddScoped<UserUtility>();
 builder.Services.AddScoped<FavoriteRepositori>();
+// Add Cart Repositories
+builder.Services.AddScoped<CartRepository>();
+builder.Services.AddScoped<CartItemRepository>();
 builder.Services.AddHttpContextAccessor();
 // Add Firebase Storage Service
 builder.Services.AddScoped<FirebaseStorageService>();
@@ -81,11 +86,11 @@ builder.Services.AddSwaggerGen(option =>
             {
                 Reference = new OpenApiReference
                 {
-                    Type=ReferenceType.SecurityScheme,
-                    Id="Bearer"
+                    Type = ReferenceType.SecurityScheme,
+                    Id = "Bearer"
                 }
             },
-            new string[]{}
+            new string[] { }
         }
     });
 });
@@ -111,9 +116,9 @@ builder.Services.AddCors(options =>
     options.AddPolicy("AllowAll", builder =>
     {
         builder
-            .AllowAnyOrigin()     
-            .AllowAnyMethod()    
-            .AllowAnyHeader();   
+            .AllowAnyOrigin()
+            .AllowAnyMethod()
+            .AllowAnyHeader();
     });
 });
 
@@ -147,7 +152,7 @@ app.UseHttpsRedirection();
 // Áp dụng CORS policy
 app.UseCors("AllowAll");
 
-// ✅ Thêm middleware
+// Thêm middleware
 app.UseSession();
 
 app.UseRouting();
