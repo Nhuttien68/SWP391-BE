@@ -1,9 +1,11 @@
-namespace EVMarketPlace.Repositories.Enums
+﻿namespace EVMarketPlace.Repositories.Enum
 {
+    /// <summary>
+    /// Trạng thái giỏ hàng 
+    /// </summary>
     public enum CartStatusEnum
     {
-        ACTIVE,
-        COMPLETED,
-        ABANDONED
+        ACTIVE,   // Giỏ hàng đang hoạt động
+        DELETED   // Giỏ hàng đã bị xóa (soft delete)
     }
 }
