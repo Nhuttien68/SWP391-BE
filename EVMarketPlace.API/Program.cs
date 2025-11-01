@@ -36,9 +36,10 @@ builder.Services.AddScoped<IFavoriteService, FavoriteService>();
 builder.Services.AddScoped<IAuctionService, AuctionService>();
 // Add Cart Service
 builder.Services.AddScoped<ICartService, CartService>();
+// Add Transaction Service
+builder.Services.AddScoped<ITransactionService, TransactionService>();
 // Add resitory services
 builder.Services.AddScoped<AuctionRepository>();
-builder.Services.AddScoped<TransactionRepository>();
 builder.Services.AddScoped<PostImageRepository>();
 builder.Services.AddScoped<VehilceBrandRepository>();
 builder.Services.AddScoped<BatteryBrandRepository>();
@@ -47,6 +48,8 @@ builder.Services.AddScoped<UserRepository>();
 builder.Services.AddScoped<WalletRepository>();
 builder.Services.AddScoped<UserUtility>();
 builder.Services.AddScoped<FavoriteRepositori>();
+builder.Services.AddScoped<TransactionRepository>();
+
 // Add Cart Repositories
 builder.Services.AddScoped<CartRepository>();
 builder.Services.AddScoped<CartItemRepository>();
