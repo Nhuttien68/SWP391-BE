@@ -70,6 +70,7 @@ namespace EVMarketPlace.API.Controllers
             return StatusCode(int.Parse(response.Status), response);
         }
         [HttpGet("Get-All-Post-Pendding")]
+        [Authorize(Roles = "ADMIN")]
         public async Task<IActionResult> GetAllPostsPendding()
         {
             var response = await _PostService.GetAllPostWithPendding();

@@ -235,17 +235,15 @@ namespace EVMarketPlace.Services.Implements
                 // Nếu hoàn thành → cộng tiền cho seller
                 if (request.Status == TransactionStatusEnum.COMPLETED.ToString())
                 {
-                    //Lấy post bằng GetByIdAsync có sẵn
-                    var post = await _postRepository.GetByIdAsync(transaction.PostId.Value);
+                    // thay vì gọi GetByIdAsync
+                    var post = await _postRepository.GetPostByIdAsync(transaction.PostId.Value);
 
                     if (post != null)
                     {
-                        //Update status
                         post.Status = PostStatusEnum.SOLD.ToString();
-
-                        //Save changes
-                        await _postRepository.UpdateAsync(post);
+                        await _postRepository.ForceUpdateAsync(post);
                     }
+
 
                     // Cộng tiền vào ví người bán
                     var topUpResult = await _walletService.TopUpWalletAsync(

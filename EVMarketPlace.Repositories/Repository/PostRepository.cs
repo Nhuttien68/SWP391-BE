@@ -12,6 +12,19 @@ namespace EVMarketPlace.Repositories.Repository
 {
     public class PostRepository : GenericRepository<Post>
     {
+        public PostRepository(EvMarketplaceContext context) : base(context)
+        {
+        }
+        public async Task<bool> UpdateStatusSoldAsync(Guid postId)
+        {
+            var post = await _context.Posts.FirstOrDefaultAsync(p => p.PostId == postId);
+            if (post == null) return false;
+
+            post.Status = PostStatusEnum.SOLD.ToString();
+            await _context.SaveChangesAsync();
+            return true;
+        }
+
         public async Task<IEnumerable<Post>> GetAllPostWithImageAsync()
         {
             return await _context.Posts

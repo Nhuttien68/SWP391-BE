@@ -56,6 +56,18 @@ namespace EVMarketPlace.Repositories.Repository
             tracker.State = EntityState.Modified;
             return await _context.SaveChangesAsync();
         }
+        public async Task<int> ForceUpdateAsync(T entity)
+        {
+            // Nếu entity đang bị detach, ép EF tracking lại đúng kiểu
+            _context.Entry(entity).State = EntityState.Detached;
+
+            // Gắn lại entity vào context
+            _context.Attach(entity);
+            _context.Entry(entity).State = EntityState.Modified;
+
+            // Lưu thay đổi
+            return await _context.SaveChangesAsync();
+        }
 
         public bool Remove(T entity)
         {
@@ -135,6 +147,10 @@ namespace EVMarketPlace.Repositories.Repository
             }
 
             return entity;
+        }
+        public async Task<T> GetPostByIdAsync(Guid code)
+        {
+            return await _context.Set<T>().FindAsync(code);
         }
 
         #region Separating asigned entity and save operators        

@@ -67,7 +67,7 @@ public partial class EvMarketplaceContext : DbContext
     }
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
-        => optionsBuilder.UseSqlServer(GetConnectionString("DefaultConnection")).UseQueryTrackingBehavior(QueryTrackingBehavior.NoTracking);
+        => optionsBuilder.UseSqlServer(GetConnectionString("DefaultConnection"));//.UseQueryTrackingBehavior(QueryTrackingBehavior.NoTracking);
 
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
