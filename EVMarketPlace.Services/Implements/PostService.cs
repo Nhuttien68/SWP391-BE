@@ -76,7 +76,7 @@ namespace EVMarketPlace.Services.Implements
             };
             
         }
-
+        // Tạo bài đăng về pin
         public async Task<BaseResponse> CreateBatteryPostAsync(PostCreateBatteryRequest request)
         {
             try
@@ -148,7 +148,6 @@ namespace EVMarketPlace.Services.Implements
                 var postDto = new PostResponseDto
                 {
                     PostId = newPost.PostId,
-                    UserId = newPost.UserId,
                     Title = newPost.Title,
                     Description = newPost.Description,
                     Price = newPost.Price,
@@ -173,7 +172,7 @@ namespace EVMarketPlace.Services.Implements
                 };
             }
         }
-
+        // Tạo bài đăng về xe
         public async Task<BaseResponse> CreateVehiclePostAsync(PostCreateVehicleRequest request)
         {
             try
@@ -251,7 +250,6 @@ namespace EVMarketPlace.Services.Implements
                 var postDto = new PostResponseDto
                 {
                     PostId = newPost.PostId,
-                    UserId = newPost.UserId,
                     Title = newPost.Title,
                     Description = newPost.Description,
                     Price = newPost.Price,
@@ -277,7 +275,7 @@ namespace EVMarketPlace.Services.Implements
                 };
             }
         }
-
+        // Xóa bài đăng (soft delete)
         public async Task<BaseResponse> DeletePostAsync(Guid postId)
         {
             try
@@ -310,7 +308,7 @@ namespace EVMarketPlace.Services.Implements
                 };
             }
         }
-
+        // Lấy tất cả bài đăng
         public async Task<BaseResponse> GetAllPostsAsync()
         {
             var posts = await _postRepository.GetAllPostWithImageAsync();
@@ -318,7 +316,6 @@ namespace EVMarketPlace.Services.Implements
             var response = posts.Select(p => new PostResponseDto
             {
                 PostId = p.PostId,
-                UserId = p.UserId,
                 Title = p.Title,
                 Description = p.Description,
                 Price = p.Price,
@@ -345,7 +342,16 @@ namespace EVMarketPlace.Services.Implements
                     BrandName = p.Battery.Brand?.Name ?? "Unknown",
                     Capacity = p.Battery.Capacity,
                     Condition = p.Battery.Condition ?? ""
-                } : null
+                } : null,
+                User = new UserinformationResponse
+                {
+                    UserId = p.User.UserId,
+                    FullName = p.User.FullName,
+                    Email = p.User.Email,
+                    Phone = p.User.Phone,
+                    Status = p.User.Status,
+                    Role = p.User.Role
+                }
             }).ToList();
 
             return new BaseResponse
@@ -355,14 +361,13 @@ namespace EVMarketPlace.Services.Implements
                 Data = response
             };
         }
-
+        // Lấy tất cả bài đăng đang chờ duyệt
         public async Task<BaseResponse> GetAllPostWithPendding()
         {
             var posts = await _postRepository.GetAllPostWithPennding();
             var response = posts.Select(p => new PostResponseDto
             {
                 PostId = p.PostId,
-                UserId = p.UserId,
                 Title = p.Title,
                 Description = p.Description,
                 Price = p.Price,
@@ -389,7 +394,16 @@ namespace EVMarketPlace.Services.Implements
                     BrandName = p.Battery.Brand?.Name ?? "Unknown",
                     Capacity = p.Battery.Capacity,
                     Condition = p.Battery.Condition ?? ""
-                } : null
+                } : null,
+                User = new UserinformationResponse
+                {
+                    UserId = p.User.UserId,
+                    FullName = p.User.FullName,
+                    Email = p.User.Email,
+                    Phone = p.User.Phone,
+                    Status = p.User.Status,
+                    Role = p.User.Role
+                }
             }).ToList();
             return new BaseResponse
             {
@@ -398,7 +412,7 @@ namespace EVMarketPlace.Services.Implements
                 Data = response
             };
         }
-
+        // Lấy bài đăng theo Id
         public async Task<BaseResponse> GetPostByIdAsync(Guid postId)
         {
             var post = await _postRepository.GetPostByIdWithImageAsync(postId);
@@ -415,7 +429,6 @@ namespace EVMarketPlace.Services.Implements
             var postDto = new PostResponseDto
             {
                 PostId = post.PostId,
-                UserId = post.UserId,
                 Title = post.Title,
                 Description = post.Description,
                 Price = post.Price,
@@ -423,7 +436,17 @@ namespace EVMarketPlace.Services.Implements
                 CreatedAt = post.CreatedAt,
                 Status = post.Status,
                 ImgId = post.PostImages?.Select(i => i.ImageId).ToList(),
-                ImageUrls = post.PostImages?.Select(i => i.ImageUrl).ToList()
+                ImageUrls = post.PostImages?.Select(i => i.ImageUrl).ToList(),
+                User = new UserinformationResponse
+                {
+                    UserId = post.User.UserId,
+                    FullName = post.User.FullName,
+                    Email = post.User.Email,
+                    Phone = post.User.Phone,
+                    Status = post.User.Status,
+                    Role = post.User.Role
+                }
+
             };
 
             // ✅ Map Vehicle (1-1)
@@ -458,7 +481,7 @@ namespace EVMarketPlace.Services.Implements
                 Data = postDto
             };
         }
-
+        // Lấy bài đăng theo UserId
         public async Task<BaseResponse> GetPostByUserIdAsync()
         {
             try
@@ -470,7 +493,6 @@ namespace EVMarketPlace.Services.Implements
                 var response = posts.Select(p => new PostResponseDto
                 {
                     PostId = p.PostId,
-                    UserId = p.UserId,
                     Title = p.Title,
                     Description = p.Description,
                     Price = p.Price,
@@ -497,7 +519,16 @@ namespace EVMarketPlace.Services.Implements
                         BrandName = p.Battery.Brand?.Name ?? "Unknown",
                         Capacity = p.Battery.Capacity,
                         Condition = p.Battery.Condition ?? ""
-                    } : null
+                    } : null,
+                    User = new UserinformationResponse
+                    {
+                        UserId = p.User.UserId,
+                        FullName = p.User.FullName,
+                        Email = p.User.Email,
+                        Phone = p.User.Phone,
+                        Status = p.User.Status,
+                        Role = p.User.Role
+                    }
                 }).ToList();
 
 
@@ -517,7 +548,7 @@ namespace EVMarketPlace.Services.Implements
                 };
             }
         }
-
+        // Từ chối bài đăng và hoàn tiền
         public async Task<BaseResponse> RejectStatusAsync(Guid PostId)
         {
             try
@@ -578,7 +609,7 @@ namespace EVMarketPlace.Services.Implements
                 };
             }
         }
-
+        // Cập nhật bài đăng về pin
         public async Task<BaseResponse> UpdateBatteryPostAsync(UpdateBatteryPostRequest request)
         {
             try
@@ -614,7 +645,7 @@ namespace EVMarketPlace.Services.Implements
                 return new BaseResponse { Status = StatusCodes.Status500InternalServerError.ToString(), Message = ex.Message };
             }
         }
-
+        // Cập nhật bài đăng về xe
         public async Task<BaseResponse> UpdateVehiclePostAsync(UpdateVehiclePostRequest request)
         {
             try
@@ -652,6 +683,7 @@ namespace EVMarketPlace.Services.Implements
                 return new BaseResponse { Status =StatusCodes.Status500InternalServerError.ToString(), Message = ex.Message };
             }
         }
+        // Cập nhật hình ảnh bài đăng
         private async Task UpdatePostImagesAsync(Post post, List<Guid>? keepImageIds, List<IFormFile>? newImages)
         {
            

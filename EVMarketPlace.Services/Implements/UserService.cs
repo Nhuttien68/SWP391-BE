@@ -132,7 +132,8 @@ namespace EVMarketPlace.Services.Implements
                     Email = account.Email,
                     Phone = account.Phone,
                     Token = token,
-                    Status = account.Status
+                    Status = account.Status,
+                    Role = account.Role
                 }
             };
         }

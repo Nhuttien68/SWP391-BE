@@ -8,7 +8,6 @@
     public class PostResponseDto
     {
         public Guid PostId { get; set; }
-        public Guid? UserId { get; set; }
         public string Title { get; set; } = null!;
         public string? Description { get; set; } = null!;
         public decimal? Price { get; set; }
@@ -19,6 +18,8 @@
         public VehicleDto? Vehicle { get; set; }
         public BatteryDto? Battery { get; set; }
         public string Status { get; set; } 
+        
+        public UserinformationResponse User { get; set; }
 
     }
     public class VehicleDto
