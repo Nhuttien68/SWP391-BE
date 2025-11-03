@@ -31,6 +31,10 @@ namespace EVMarketPlace.Repositories.Repository
         {
             return await _context.Set<T>().ToListAsync();
         }
+        public IQueryable<T> GetQueryable()
+        {
+            return _dbSet.AsQueryable();
+        }
         public void Create(T entity)
         {
             _context.Add(entity);

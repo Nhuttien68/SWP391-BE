@@ -31,6 +31,8 @@ public partial class Post
 
     public virtual ICollection<PostImage> PostImages { get; set; } = new List<PostImage>();
 
+    public virtual ICollection<Review> Reviews { get; set; } = new List<Review>();
+
     public virtual ICollection<Transaction> Transactions { get; set; } = new List<Transaction>();
 
     public virtual User? User { get; set; }

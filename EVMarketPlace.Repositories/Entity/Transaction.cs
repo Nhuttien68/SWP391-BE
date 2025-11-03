@@ -37,7 +37,7 @@ public partial class Transaction
 
     public virtual Post? Post { get; set; }
 
-    public virtual Review? Review { get; set; }
+    public virtual ICollection<Review> Reviews { get; set; } = new List<Review>();
 
     public virtual User? Seller { get; set; }
 }

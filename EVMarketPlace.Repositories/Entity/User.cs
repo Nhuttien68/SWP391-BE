@@ -29,7 +29,9 @@ public partial class User
 
     public virtual ICollection<Post> Posts { get; set; } = new List<Post>();
 
-    public virtual ICollection<Review> Reviews { get; set; } = new List<Review>();
+    public virtual ICollection<Review> ReviewReviewedUsers { get; set; } = new List<Review>();
+
+    public virtual ICollection<Review> ReviewReviewers { get; set; } = new List<Review>();
 
     public virtual ShoppingCart? ShoppingCart { get; set; }
 

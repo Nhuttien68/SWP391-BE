@@ -68,5 +68,21 @@ namespace EVMarketPlace.Repositories.Repository
             await _context.SaveChangesAsync();
             return transaction;
         }
+        // ✅ Hàm lấy transaction có kèm Post
+        public async Task<Transaction?> GetTransactionWithPostAsync(Guid transactionId)
+        {
+            return await _context.Transactions
+                .Include(t => t.Post)
+                .FirstOrDefaultAsync(t => t.TransactionId == transactionId);
+        }
+
+        // ✅ Hàm lấy transaction có kèm Seller (nếu cần)
+        public async Task<Transaction?> GetTransactionWithSellerAsync(Guid transactionId)
+        {
+            return await _context.Transactions
+                .Include(t => t.Seller)
+                .Include(t => t.Post)
+                .FirstOrDefaultAsync(t => t.TransactionId == transactionId);
+        }
     }
 }
