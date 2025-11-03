@@ -51,12 +51,12 @@ namespace EVMarketPlace.API.Controllers
         }
 
         /// Cập nhật trạng thái giao dịch (Seller/Admin)
-        [HttpPut("update-status")]
-        public async Task<IActionResult> UpdateStatus([FromBody] UpdateTransactionStatusRequest request)
-        {
-            var response = await _transactionService.UpdateTransactionStatusAsync(User, request);
-            return StatusCode(int.Parse(response.Status), response);
-        }
+        //[HttpPut("update-status")]
+        //public async Task<IActionResult> UpdateStatus([FromBody] UpdateTransactionStatusRequest request)
+        //{
+        //    var response = await _transactionService.UpdateTransactionStatusAsync(User, request);
+        //    return StatusCode(int.Parse(response.Status), response);
+        //}
 
         // Hủy giao dịch (Buyer/Admin)
         [HttpPut("cancel/{id}")]
