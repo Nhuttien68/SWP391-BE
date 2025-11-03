@@ -18,6 +18,16 @@ namespace EVMarketPlace.API.Controllers
         {
             _transactionService = transactionService;
         }
+
+        
+        //Thanh toán toàn bộ giỏ hàng
+        [HttpPost("create-from-cart")]
+        public async Task<IActionResult> CreateCartTransaction([FromBody] CreateCartTransactionRequest request)
+        {
+            var result = await _transactionService.CreateCartTransactionAsync(User, request);
+            return StatusCode(int.Parse(result.Status), result);
+        }
+
         // Tạo giao dịch mới (thanh toán)
         [HttpPost("create")]
         public async Task<IActionResult> CreateTransaction([FromBody] CreateTransactionRequest request)
