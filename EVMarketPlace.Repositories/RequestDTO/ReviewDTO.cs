@@ -11,6 +11,12 @@ namespace EVMarketPlace.Repositories.RequestDTO
     internal class ReviewDTO
     {
     }
+    public class UpdateReviewDTO
+    {
+        public Guid ReviewId { get; set; }
+        public int Rating { get; set; }
+        public string? Comment { get; set; }
+    }
     public class ReviewCreateDTO
     {
         public Guid TransactionId { get; set; }
@@ -22,7 +28,7 @@ namespace EVMarketPlace.Repositories.RequestDTO
     {
         public Guid ReviewId { get; set; }
         public string ReviewTargetType { get; set; } = string.Empty;
-        public int Rating { get; set; }
+        public int? Rating { get; set; }
         public string? Comment { get; set; }
         public DateTime CreatedAt { get; set; }
         public string? ReviewerName { get; set; }
@@ -32,11 +38,11 @@ namespace EVMarketPlace.Repositories.RequestDTO
     {
         public Guid ReviewId { get; set; }
         public string ReviewTargetType { get; set; } = string.Empty;
-        public int Rating { get; set; }
+        public int? Rating { get; set; }
         public string? Comment { get; set; }
         public DateTime CreatedAt { get; set; }
         public string? ReviewerName { get; set; }
 
-        public UserInforDTO SellerInfor { get; set; }
+        public UserinformationResponse SellerInfor { get; set; }
     }
 }

@@ -15,7 +15,8 @@ namespace EVMarketPlace.Services.Interfaces
         Task<BaseResponse> CreateReviewForPostAsync( ReviewCreateDTO dto);
         Task<BaseResponse> GetByPostIdAsync(Guid postId);
         Task<BaseResponse> GetByUserIdAsync(Guid userId);
-        Task<BaseResponse> GetByTransactionIdAsync(Guid transactionId);
         Task<BaseResponse> DeleteReviewAsync(Guid reviewId);
+        Task<BaseResponse> UpdateReviewAsync(UpdateReviewDTO dto);
+
     }
 }
