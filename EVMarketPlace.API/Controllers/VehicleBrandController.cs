@@ -34,12 +34,15 @@ namespace EVMarketPlace.API.Controllers
             return StatusCode(int.Parse(response.Status), response);
         }
         [HttpGet("get-all-vehicle-brands")]
+        [AllowAnonymous]
         public async Task<IActionResult> GetAllVehicleBrandsAsync()
         {
             var response = await _vehicleBrandService.GetAllVehicleBrandsAsync();
             return StatusCode(int.Parse(response.Status), response);
         }
+        
         [HttpGet("get-vehicle-brand-by-id/{brandId}")]
+        [AllowAnonymous]
         public async Task<IActionResult> GetVehicleBrandByIdAsync([FromRoute] Guid brandId)
         {
             var response = await _vehicleBrandService.GetVehicleBrandByIdAsync(brandId);

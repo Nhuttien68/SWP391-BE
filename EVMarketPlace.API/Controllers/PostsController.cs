@@ -39,7 +39,9 @@ namespace EVMarketPlace.API.Controllers
             var response = await _PostService.GetAllPostsAsync();
             return StatusCode(int.Parse(response.Status), response);
         }
+        
         [HttpGet("Get-Post-By-Id/{id}")]
+        [AllowAnonymous]
         public async Task<IActionResult> GetPostById([FromRoute] Guid id)
         {
             var response = await _PostService.GetPostByIdAsync(id);
