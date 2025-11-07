@@ -44,23 +44,24 @@ namespace EVMarketPlace.Services.Implements
                     return CreateBadRequestResponse("Số tiền thanh toán phải lớn hơn 0.");
                 }
 
-                // ✅ Tạo OrderId & timezone
-                var timeZone = TimeZoneInfo.FindSystemTimeZoneById(_config.TimeZoneId);
-                var now = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, timeZone);
-                var generatedOrderId = orderId ?? now.Ticks.ToString();
-
-                // ✅ Lưu UserId vào Session
+                // ✅ Get UserId từ token
+                Guid userId;
                 try
                 {
-                    var userId = _userUtility.GetUserIdFromToken();
-                    context.Session.SetString($"vnpay_order_{generatedOrderId}", userId.ToString());
-                    _logger.LogInformation("✅ CreatePaymentUrl: Session saved. OrderId={OrderId}", generatedOrderId);
+                    userId = _userUtility.GetUserIdFromToken();
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError(ex, "❌ CreatePaymentUrl: Failed to save session");
+                    _logger.LogError(ex, "❌ CreatePaymentUrl: Failed to get userId");
                     return CreateUnauthorizedResponse("Không thể lấy thông tin người dùng. Vui lòng đăng nhập lại!");
                 }
+
+                // ✅ Tạo OrderId với format: {timestamp}_{userId} để lấy lại userId khi callback
+                var timeZone = TimeZoneInfo.FindSystemTimeZoneById(_config.TimeZoneId);
+                var now = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, timeZone);
+                var generatedOrderId = orderId ?? $"{now.Ticks}_{userId.ToString("N")}"; // Format: 638980123456789_abc123...
+
+                _logger.LogInformation("✅ CreatePaymentUrl: OrderId={OrderId}, UserId={UserId}", generatedOrderId, userId);
 
                 // ✅ Tạo VNPay request
                 var vnpay = new VnPayLibrary();
@@ -155,21 +156,17 @@ namespace EVMarketPlace.Services.Implements
                     );
                 }
 
-                // ✅ Get UserId from Session
-                var sessionKey = $"vnpay_order_{orderId}";
-                context.Session.TryGetValue(sessionKey, out var userIdBytes);
-
-                if (userIdBytes == null)
+                // ✅ Extract UserId from OrderId (format: {timestamp}_{userId})
+                Guid userId;
+                var orderParts = orderId.Split('_');
+                if (orderParts.Length == 2 && Guid.TryParse(orderParts[1], out userId))
                 {
-                    _logger.LogError("❌ ProcessReturn: UserId not found in session. OrderId={OrderId}", orderId);
-                    return CreateBadRequestResponse("Không tìm thấy thông tin người dùng. Vui lòng thực hiện lại giao dịch.");
+                    _logger.LogInformation("✅ ProcessReturn: Extracted UserId={UserId} from OrderId={OrderId}", userId, orderId);
                 }
-
-                var userIdString = System.Text.Encoding.UTF8.GetString(userIdBytes);
-                if (!Guid.TryParse(userIdString, out var userId))
+                else
                 {
-                    _logger.LogError("❌ ProcessReturn: Invalid UserId format. Value={Value}", userIdString);
-                    return CreateBadRequestResponse("Thông tin người dùng không hợp lệ.");
+                    _logger.LogError("❌ ProcessReturn: Invalid OrderId format. OrderId={OrderId}", orderId);
+                    return CreateBadRequestResponse("OrderId không hợp lệ. Vui lòng thực hiện lại giao dịch.");
                 }
 
                 // ✅ TopUp wallet
@@ -178,8 +175,6 @@ namespace EVMarketPlace.Services.Implements
                 if (walletResponse.Status == StatusCodes.Status200OK.ToString())
                 {
                     _logger.LogInformation("✅ ProcessReturn: Payment + Wallet success. OrderId={OrderId}, Amount={Amount}", orderId, amount);
-
-                    context.Session.Remove(sessionKey);
 
                     return CreateSuccessResponse(
                         "Thanh toán thành công. Tiền đã được cộng vào ví.",

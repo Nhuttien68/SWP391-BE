@@ -38,11 +38,36 @@ namespace EVMarketPlace.API.Controllers
         /// </summary>
         [HttpGet("return")]
         [AllowAnonymous]
-        [ApiExplorerSettings(IgnoreApi = true)]  // ẨN khỏi Swagger
+        [ApiExplorerSettings(IgnoreApi = true)]
         public async Task<IActionResult> PaymentReturn()
         {
             var response = await _paymentService.ProcessPaymentReturnAsync(Request.Query, HttpContext);
-            return StatusCode(int.Parse(response.Status), response);
+
+            // Parse response status
+            var statusCode = int.Parse(response.Status);
+            var success = statusCode == 200;
+
+            // Frontend URL
+            var frontendUrl = "http://localhost:5173/payment-return";
+
+            // Lấy thông tin từ VNPay query params
+            var vnpResponseCode = Request.Query["vnp_ResponseCode"].ToString();
+            var vnpAmount = Request.Query["vnp_Amount"].ToString();
+            var vnpOrderInfo = Request.Query["vnp_OrderInfo"].ToString();
+            var vnpTransactionNo = Request.Query["vnp_TransactionNo"].ToString();
+
+            if (success && vnpResponseCode == "00")
+            {
+                // Thanh toán thành công - redirect với params VNPay
+                var redirectUrl = $"{frontendUrl}?vnp_ResponseCode={vnpResponseCode}&vnp_Amount={vnpAmount}&vnp_OrderInfo={Uri.EscapeDataString(vnpOrderInfo)}&vnp_TransactionNo={vnpTransactionNo}";
+                return Redirect(redirectUrl);
+            }
+            else
+            {
+                // Thanh toán thất bại
+                var redirectUrl = $"{frontendUrl}?vnp_ResponseCode={vnpResponseCode}&message={Uri.EscapeDataString(response.Message)}";
+                return Redirect(redirectUrl);
+            }
         }
     }
 }

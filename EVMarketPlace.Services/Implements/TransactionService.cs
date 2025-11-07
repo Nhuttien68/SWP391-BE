@@ -96,41 +96,75 @@ namespace EVMarketPlace.Services.Implements
                     validItems.Add(item);
                 }
 
-                // Kiểm tra số dư
-                var buyerBalance = await _walletService.GetBalanceAsync();
-                if (buyerBalance < totalAmount)
+                // CHỈ XỬ LÝ VÍ KHI DÙNG PAYMENT METHOD = WALLET
+                if (request.PaymentMethod == "WALLET")
                 {
-                    return Response(400, $"Số dư không đủ. Cần {totalAmount:N0} VNĐ, hiện có {buyerBalance:N0} VNĐ.");
-                }
+                    // Kiểm tra số dư
+                    var buyerBalance = await _walletService.GetBalanceAsync();
+                    if (buyerBalance < totalAmount)
+                    {
+                        return Response(400, $"Số dư không đủ. Cần {totalAmount:N0} VNĐ, hiện có {buyerBalance:N0} VNĐ.");
+                    }
 
-                // Trừ tiền người mua
-                var deductResult = await _walletService.DeductAsync(userId, totalAmount);
-                if (int.Parse(deductResult.Status) != 200)
-                {
-                    return Response(400, "Không thể trừ tiền từ ví. Vui lòng thử lại.");
+                    // Trừ tiền người mua
+                    var deductResult = await _walletService.DeductAsync(userId, totalAmount);
+                    if (int.Parse(deductResult.Status) != 200)
+                    {
+                        return Response(400, "Không thể trừ tiền từ ví. Vui lòng thử lại.");
+                    }
+
+                    // Track các seller đã nhận tiền để rollback nếu cần
+                    var paidSellers = new List<(Guid SellerId, decimal Amount)>();
+                    bool paymentFailed = false;
+
+                    // Cộng tiền cho từng người bán
+                    foreach (var item in validItems)
+                    {
+                        var post = await _postRepository.GetByIdAsync(item.PostId.Value);
+
+                        var topUpResult = await _walletService.TopUpWalletAsync(
+                            post.Price ?? 0,
+                            Guid.NewGuid().ToString(),
+                            "TRANSACTION",
+                            post.UserId ?? Guid.Empty
+                        );
+
+                        if (int.Parse(topUpResult.Status) != 200)
+                        {
+                            paymentFailed = true;
+                            break;
+                        }
+
+                        paidSellers.Add((post.UserId ?? Guid.Empty, post.Price ?? 0));
+                    }
+
+                    // Nếu có lỗi, rollback TOÀN BỘ
+                    if (paymentFailed)
+                    {
+                        // Lấy lại tiền từ các seller đã nhận
+                        foreach (var (sellerId, amount) in paidSellers)
+                        {
+                            await _walletService.DeductAsync(sellerId, amount);
+                        }
+
+                        // Hoàn tiền lại cho buyer
+                        await _walletService.TopUpWalletAsync(
+                            totalAmount,
+                            $"REFUND-{Guid.NewGuid()}",
+                            "REFUND",
+                            userId
+                        );
+
+                        return Response(400, "Không thể chuyển tiền cho người bán. Giao dịch đã được hoàn tác toàn bộ.");
+                    }
                 }
 
                 // Tạo transaction cho từng sản phẩm
                 var transactions = new List<Transaction>();
-                bool hasError = false;
 
                 foreach (var item in validItems)
                 {
                     var post = await _postRepository.GetByIdAsync(item.PostId.Value);
-
-                    // Cộng tiền cho người bán
-                    var topUpResult = await _walletService.TopUpWalletAsync(
-                        post.Price ?? 0,
-                        Guid.NewGuid().ToString(),
-                        "TRANSACTION",
-                        post.UserId ?? Guid.Empty
-                    );
-
-                    if (int.Parse(topUpResult.Status) != 200)
-                    {
-                        hasError = true;
-                        break;
-                    }
 
                     // Cập nhật trạng thái sản phẩm thành SOLD
                     var postDetail = await _postRepository.GetPostByIdAsync(item.PostId.Value);
@@ -162,19 +196,7 @@ namespace EVMarketPlace.Services.Implements
                     transactions.Add(transaction);
                 }
 
-                // Nếu có lỗi, rollback
-                if (hasError)
-                {
-                    await _walletService.TopUpWalletAsync(
-                        totalAmount,
-                        $"REFUND-{Guid.NewGuid()}",
-                        "REFUND",
-                        userId
-                    );
-                    return Response(400, "Không thể chuyển tiền cho người bán. Giao dịch đã được hoàn tác.");
-                }
-
-                // Xóa các items đã thanh toán khỏi giỏ hàng
+                // Xóa giỏ hàng sau khi thanh toán thành công
                 foreach (var item in validItems)
                 {
                     await _cartItemRepository.DeleteCartItemAsync(item.CartItemId);
@@ -244,38 +266,41 @@ namespace EVMarketPlace.Services.Implements
                     return Response(400, statusMessage);
                 }
 
-                // Kiểm tra số dư ví người mua
-                var buyerBalance = await _walletService.GetBalanceAsync();
-                if (buyerBalance < post.Price)
+                // Kiểm tra số dư ví người mua (CHỈ KHI DÙNG WALLET)
+                if (request.PaymentMethod == "WALLET")
                 {
-                    return Response(400, $"Số dư không đủ. Cần {post.Price:N0} VNĐ, hiện có {buyerBalance:N0} VNĐ.");
-                }
+                    var buyerBalance = await _walletService.GetBalanceAsync();
+                    if (buyerBalance < post.Price)
+                    {
+                        return Response(400, $"Số dư không đủ. Cần {post.Price:N0} VNĐ, hiện có {buyerBalance:N0} VNĐ.");
+                    }
 
-                // Trừ tiền người mua
-                var deductResult = await _walletService.DeductAsync(userId, post.Price ?? 0);
-                if (int.Parse(deductResult.Status) != 200)
-                {
-                    return Response(400, "Không thể trừ tiền từ ví. Vui lòng thử lại.");
-                }
+                    // Trừ tiền người mua
+                    var deductResult = await _walletService.DeductAsync(userId, post.Price ?? 0);
+                    if (int.Parse(deductResult.Status) != 200)
+                    {
+                        return Response(400, "Không thể trừ tiền từ ví. Vui lòng thử lại.");
+                    }
 
-                // Cộng tiền cho người bán ngay lập tức
-                var topUpResult = await _walletService.TopUpWalletAsync(
-                    post.Price ?? 0,
-                    Guid.NewGuid().ToString(),
-                    "TRANSACTION",
-                    post.UserId ?? Guid.Empty
-                );
-
-                if (int.Parse(topUpResult.Status) != 200)
-                {
-                    // Nếu không chuyển được tiền cho seller thì hoàn lại cho buyer
-                    await _walletService.TopUpWalletAsync(
+                    // Cộng tiền cho người bán ngay lập tức
+                    var topUpResult = await _walletService.TopUpWalletAsync(
                         post.Price ?? 0,
-                        $"REFUND-{Guid.NewGuid()}",
-                        "REFUND",
-                        userId
+                        Guid.NewGuid().ToString(),
+                        "TRANSACTION",
+                        post.UserId ?? Guid.Empty
                     );
-                    return Response(400, "Không thể chuyển tiền cho người bán. Giao dịch đã được hoàn tác.");
+
+                    if (int.Parse(topUpResult.Status) != 200)
+                    {
+                        // Nếu không chuyển được tiền cho seller thì hoàn lại cho buyer
+                        await _walletService.TopUpWalletAsync(
+                            post.Price ?? 0,
+                            $"REFUND-{Guid.NewGuid()}",
+                            "REFUND",
+                            userId
+                        );
+                        return Response(400, "Không thể chuyển tiền cho người bán. Giao dịch đã được hoàn tác.");
+                    }
                 }
 
                 // Cập nhật trạng thái sản phẩm thành SOLD
