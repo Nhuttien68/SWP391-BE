@@ -76,6 +76,30 @@ namespace EVMarketPlace.Services.Implements
             };
             
         }
+
+        public async Task<BaseResponse> CountPostsByStatusAsync(PostStatusEnum status)
+        {
+            try
+            {
+                var count = await _postRepository.CountPostsByStatusAsync(status);
+
+                return new BaseResponse
+                {
+                    Status = StatusCodes.Status200OK.ToString(),
+                    Message = $"Số lượng bài đăng có trạng thái {status}: {count}",
+                    Data = new { Status = status.ToString(), Count = count }
+                };
+            }
+            catch (Exception ex)
+            {
+                return new BaseResponse
+                {
+                    Status = StatusCodes.Status500InternalServerError.ToString(),
+                    Message = $"Error: {ex.Message}"
+                };
+            }
+        }
+
         // Tạo bài đăng về pin
         public async Task<BaseResponse> CreateBatteryPostAsync(PostCreateBatteryRequest request)
         {
@@ -548,6 +572,82 @@ namespace EVMarketPlace.Services.Implements
                 };
             }
         }
+
+        public async Task<BaseResponse> GetPostsByDateAndStatusAsync(int day, int month, int year, PostStatusEnum status)
+        {
+            try
+            {
+                var posts = await _postRepository.GetPostsByDateAndStatusAsync(day, month, year, status);
+
+                var response = posts.Select(MapToPostDTO).ToList();
+
+                return new BaseResponse
+                {
+                    Status = StatusCodes.Status200OK.ToString(),
+                    Message = $"Found {response.Count} posts on {day}/{month}/{year} with status {status}.",
+                    Data = response
+                };
+            }
+            catch (Exception ex)
+            {
+                return new BaseResponse
+                {
+                    Status = StatusCodes.Status500InternalServerError.ToString(),
+                    Message = ex.Message
+                };
+            }
+        }
+
+        public async Task<BaseResponse> GetPostsByMonthAndStatusAsync(int month, int year, PostStatusEnum status)
+        {
+            try
+            {
+                var posts = await _postRepository.GetPostsByMonthAndStatusAsync(month, year, status);
+
+                var response = posts.Select(MapToPostDTO).ToList();
+
+                return new BaseResponse
+                {
+                    Status = StatusCodes.Status200OK.ToString(),
+                    Message = $"Found {response.Count} posts in {month}/{year} with status {status}.",
+                    Data = response
+                };
+            }
+            catch (Exception ex)
+            {
+                return new BaseResponse
+                {
+                    Status = StatusCodes.Status500InternalServerError.ToString(),
+                    Message = ex.Message
+                };
+            }
+        }
+
+        public async Task<BaseResponse> GetPostsByYearAndStatusAsync(int year, PostStatusEnum status)
+        {
+            try
+            {
+                var posts = await _postRepository.GetPostsByYearAndStatusAsync(year, status);
+
+                var response = posts.Select(MapToPostDTO).ToList();
+
+                return new BaseResponse
+                {
+                    Status = StatusCodes.Status200OK.ToString(),
+                    Message = $"Found {response.Count} posts in year {year} with status {status}.",
+                    Data = response
+                };
+            }
+            catch (Exception ex)
+            {
+                return new BaseResponse
+                {
+                    Status = StatusCodes.Status500InternalServerError.ToString(),
+                    Message = ex.Message
+                };
+            }
+        }
+
         // Từ chối bài đăng và hoàn tiền
         public async Task<BaseResponse> RejectStatusAsync(Guid PostId)
         {
@@ -715,5 +815,49 @@ namespace EVMarketPlace.Services.Implements
                 }
             }
         }
+
+        private PostResponseDto MapToPostDTO(Post p)
+        {
+            return new PostResponseDto
+            {
+                PostId = p.PostId,
+                Title = p.Title,
+                Description = p.Description,
+                Price = p.Price,
+                Type = p.Type,
+                CreatedAt = p.CreatedAt,
+                Status = p.Status,
+                ImgId = p.PostImages?.Select(i => i.ImageId).ToList(),
+                ImageUrls = p.PostImages?.Select(i => i.ImageUrl).ToList(),
+
+                Vehicle = p.Vehicle != null ? new VehicleDto
+                {
+                    VehicleId = p.Vehicle.VehicleId,
+                    BrandName = p.Vehicle.Brand?.Name ?? "Unknown",
+                    Model = p.Vehicle.Model ?? "",
+                    Year = p.Vehicle.Year,
+                    Mileage = p.Vehicle.Mileage
+                } : null,
+
+                Battery = p.Battery != null ? new BatteryDto
+                {
+                    BatteryId = p.Battery.BatteryId,
+                    BrandName = p.Battery.Brand?.Name ?? "Unknown",
+                    Capacity = p.Battery.Capacity,
+                    Condition = p.Battery.Condition ?? ""
+                } : null,
+
+                User = p.User != null ? new UserinformationResponse
+                {
+                    UserId = p.User.UserId,
+                    FullName = p.User.FullName,
+                    Email = p.User.Email,
+                    Phone = p.User.Phone,
+                    Status = p.User.Status,
+                    Role = p.User.Role
+                } : null
+            };
+        }
+
     }
 }

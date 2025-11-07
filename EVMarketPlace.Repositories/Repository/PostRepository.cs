@@ -147,6 +147,64 @@ namespace EVMarketPlace.Repositories.Repository
                .Where(p => p.Status == PostStatusEnum.PENNDING.ToString())
                .ToListAsync();
         }
+        // Đếm tổng số bài đăng
+        public async Task<int> CountPostsByStatusAsync(PostStatusEnum status)
+        {
+            return await _context.Posts
+                .CountAsync(p => p.Status == status.ToString());
+        }
+        // Lấy bài đăng theo ngày và trạng thái
+        public async Task<List<Post>> GetPostsByDateAndStatusAsync(int day, int month, int year, PostStatusEnum status)
+        {
+            return await _context.Posts
+                .Include(p => p.PostImages)
+                .Include(p => p.User)
+                .Include(p => p.Vehicle).ThenInclude(v => v.Brand)
+                .Include(p => p.Battery).ThenInclude(b => b.Brand)
+                .Where(p =>
+                    p.CreatedAt.HasValue &&
+                    p.CreatedAt.Value.Day == day &&
+                    p.CreatedAt.Value.Month == month &&
+                    p.CreatedAt.Value.Year == year &&
+                    p.Status == status.ToString()
+                )
+                .OrderByDescending(p => p.CreatedAt)
+                .ToListAsync();
+        }
+        // Lấy bài đăng theo tháng và trạng thái
+        public async Task<List<Post>> GetPostsByMonthAndStatusAsync(int month, int year, PostStatusEnum status)
+        {
+            return await _context.Posts
+                .Include(p => p.PostImages)
+                .Include(p => p.User)
+                .Include(p => p.Vehicle).ThenInclude(v => v.Brand)
+                .Include(p => p.Battery).ThenInclude(b => b.Brand)
+                .Where(p =>
+                    p.CreatedAt.HasValue &&
+                    p.CreatedAt.Value.Month == month &&
+                    p.CreatedAt.Value.Year == year &&
+                    p.Status == status.ToString()
+                )
+                .OrderByDescending(p => p.CreatedAt)
+                .ToListAsync();
+        }
+        // Lấy bài đăng theo năm và trạng thái
+        public async Task<List<Post>> GetPostsByYearAndStatusAsync(int year, PostStatusEnum status)
+        {
+            return await _context.Posts
+                .Include(p => p.PostImages)
+                .Include(p => p.User)
+                .Include(p => p.Vehicle).ThenInclude(v => v.Brand)
+                .Include(p => p.Battery).ThenInclude(b => b.Brand)
+                .Where(p =>
+                    p.CreatedAt.HasValue &&
+                    p.CreatedAt.Value.Year == year &&
+                    p.Status == status.ToString()
+                )
+                .OrderByDescending(p => p.CreatedAt)
+                .ToListAsync();
+        }
+
 
     }
 }

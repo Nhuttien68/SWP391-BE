@@ -1,4 +1,5 @@
 ﻿using EVMarketPlace.Repositories.Entity;
+using EVMarketPlace.Repositories.Enum;
 using EVMarketPlace.Repositories.RequestDTO;
 using EVMarketPlace.Repositories.Utils;
 using Microsoft.EntityFrameworkCore;
@@ -14,14 +15,28 @@ namespace EVMarketPlace.Repositories.Repository
     {
         public async Task<User> GetAccountAsync(LoginRequest loginRequest)
         {
-            return await _context.Users.FirstOrDefaultAsync(a => a.Email == loginRequest.Email &&
-            a.PasswordHash.Equals(HashPassword.HashPasswordSHA256(loginRequest.Password)));
+            return await _context.Users.FirstOrDefaultAsync(a =>
+            a.Email == loginRequest.Email &&
+            a.PasswordHash == HashPassword.HashPasswordSHA256(loginRequest.Password) &&
+            a.Status == UserStatusEnum.ACTIVE.ToString()
+        ); ;
         }
         public async Task<User?> GetByEmailAsync(string email)
         {
             return await _context.Users
                 .FirstOrDefaultAsync(u => u.Email == email );
             
+        }
+        public async Task<IEnumerable<User>> GetAllActiveUsersAsync()
+        {
+            return await _context.Users
+                .Where(u => u.Status == UserStatusEnum.ACTIVE.ToString())
+                .ToListAsync();
+        }
+        public async Task<int> CountActiveUsersAsync()
+        {
+            return await _context.Users
+                .CountAsync(u => u.Status == UserStatusEnum.ACTIVE.ToString());
         }
     }
 }

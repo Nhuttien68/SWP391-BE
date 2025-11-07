@@ -1,4 +1,5 @@
-﻿using EVMarketPlace.Repositories.RequestDTO.Posts;
+﻿using EVMarketPlace.Repositories.Enum;
+using EVMarketPlace.Repositories.RequestDTO.Posts;
 using EVMarketPlace.Repositories.ResponseDTO;
 using EVMarketPlace.Repositories.ResponseDTO.Posts;
 using Microsoft.AspNetCore.Http;
@@ -21,6 +22,14 @@ namespace EVMarketPlace.Services.Interfaces
         Task<BaseResponse> GetAllPostWithPendding();
         Task<BaseResponse> ApprovedStatus(Guid PostId);
         Task<BaseResponse> RejectStatusAsync(Guid PostId);
+        Task<BaseResponse> CountPostsByStatusAsync(PostStatusEnum status);
+        // Lọc theo ngày + status
+        Task<BaseResponse> GetPostsByDateAndStatusAsync( int day,int month,int year,PostStatusEnum status);
 
+        // Lọc theo tháng + status
+        Task<BaseResponse> GetPostsByMonthAndStatusAsync(int month,int year, PostStatusEnum status);
+
+        // Lọc theo năm + status
+        Task<BaseResponse> GetPostsByYearAndStatusAsync(int year, PostStatusEnum status);
     }
 }

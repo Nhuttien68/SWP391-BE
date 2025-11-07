@@ -84,5 +84,68 @@ namespace EVMarketPlace.Repositories.Repository
                 .Include(t => t.Post)
                 .FirstOrDefaultAsync(t => t.TransactionId == transactionId);
         }
+        // ✅ Hàm lấy tất cả transaction sắp xếp theo ngày tạo giảm dần
+        public async Task<List<Transaction>> GetAllSortedByDateDescAsync()
+        {
+            return await _context.Transactions
+                .Include(t => t.Buyer)
+                .Include(t => t.Seller)
+                .Include(t => t.Post)
+                    .ThenInclude(p => p.PostImages)
+                .OrderByDescending(t => t.CreatedAt)
+                .ToListAsync();
+        }
+        // ✅ Hàm lấy tất cả transaction trong khoảng thời gian nhất định
+        public async Task<List<Transaction>> GetByDateRangeAsync(DateTime startDate, DateTime endDate)
+        {
+            return await _context.Transactions
+                .Include(t => t.Buyer)
+                .Include(t => t.Seller)
+                .Include(t => t.Post)
+                    .ThenInclude(p => p.PostImages)
+                .Where(t => t.CreatedAt >= startDate && t.CreatedAt <= endDate)
+                .OrderByDescending(t => t.CreatedAt)
+                .ToListAsync();
+        }
+        // ✅ Hàm lấy tất cả transaction trong  năm 
+        public async Task<List<Transaction>> GetByYearAsync(int year)
+        {
+            return await _context.Transactions
+                .Include(t => t.Buyer)
+                .Include(t => t.Seller)
+                .Include(t => t.Post)
+                    .ThenInclude(p => p.PostImages)
+                .Where(t => t.CreatedAt.Value.Year == year)
+                .OrderByDescending(t => t.CreatedAt)
+                .ToListAsync();
+        }
+        // ✅ Hàm lấy tất cả transaction trong tháng của năm
+        public async Task<List<Transaction>> GetByMonthAsync(int month, int year)
+        {
+            return await _context.Transactions
+                .Include(t => t.Buyer)
+                .Include(t => t.Seller)
+                .Include(t => t.Post)
+                    .ThenInclude(p => p.PostImages)
+                .Where(t => t.CreatedAt.Value.Month == month &&
+                            t.CreatedAt.Value.Year == year)
+                .OrderByDescending(t => t.CreatedAt)
+                .ToListAsync();
+        }
+        // ✅ Hàm lấy tất cả transaction trong ngày cụ thể
+        public async Task<List<Transaction>> GetByDateAsync(int day, int month, int year)
+        {
+            return await _context.Transactions
+                .Include(t => t.Buyer)
+                .Include(t => t.Seller)
+                .Include(t => t.Post)
+                    .ThenInclude(p => p.PostImages)
+                .Where(t => t.CreatedAt.Value.Day == day &&
+                            t.CreatedAt.Value.Month == month &&
+                            t.CreatedAt.Value.Year == year)
+                .OrderByDescending(t => t.CreatedAt)
+                .ToListAsync();
+        }
+
     }
 }

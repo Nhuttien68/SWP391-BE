@@ -17,5 +17,7 @@ namespace EVMarketPlace.Services.Interfaces
         Task<BaseResponse> ChangePasswordAsync(ChangePasswordRequest request);
         Task<BaseResponse> ForgotPasswordAsync(string email);
         Task<BaseResponse> ResendOtpAsync(string email);
+        Task<BaseResponse> GetAllUser();
+        Task<BaseResponse> CountUser();
     }
 }

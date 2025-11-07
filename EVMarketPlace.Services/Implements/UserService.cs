@@ -255,5 +255,52 @@ namespace EVMarketPlace.Services.Implements
                 Message = "Mã OTP mới đã được gửi đến email của bạn."
             };
         }
+
+        public async Task<BaseResponse> GetAllUser()
+        {
+            try
+            {
+                var users = await _userRepository.GetAllActiveUsersAsync();
+
+                return new BaseResponse
+                {
+                    Status = StatusCodes.Status200OK.ToString(),
+                    Message = "Get active users successfully.",
+                    Data = users
+                };
+            }
+            catch (Exception ex)
+            {
+                return new BaseResponse
+                {
+                    Status = StatusCodes.Status500InternalServerError.ToString(),
+                    Message = "Error: " + ex.Message
+                };
+            }
+        }
+
+        public async Task<BaseResponse> CountUser()
+        {
+            try
+            {
+                int total = await _userRepository.CountActiveUsersAsync();
+
+                return new BaseResponse
+                {
+                    Status = StatusCodes.Status200OK.ToString(),
+                    Message = "Count active users successfully.",
+                    Data = total
+                };
+            }
+            catch (Exception ex)
+            {
+                return new BaseResponse
+                {
+                    Status = StatusCodes.Status500InternalServerError.ToString(),
+                    Message = "Error: " + ex.Message
+                };
+            }
+
+        }
     }
 }

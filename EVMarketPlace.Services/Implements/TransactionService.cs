@@ -674,5 +674,88 @@ namespace EVMarketPlace.Services.Implements
                 Data = data
             };
         }
+        // Thống kê giao dịch theo ngày
+        public async Task<BaseResponse> GetTransactionsByDateAsync(ClaimsPrincipal user, int day, int month, int year)
+        {
+            try
+            {
+                var role = GetRole(user);
+                if (role != "ADMIN")
+                    return Response(403, "Chỉ Admin mới có quyền xem giao dịch theo ngày.");
+
+                var transactions = await _transactionRepository.GetByDateAsync(day, month, year);
+
+                var list = transactions.Select(MapToListItemDTO).ToList();
+
+                return Response(200, $"Tìm thấy {list.Count} giao dịch trong ngày {day}/{month}/{year}.", list);
+            }
+            catch (Exception ex)
+            {
+                return Response(500, $"Lỗi: {ex.Message}");
+            }
+        }
+        // Thống kê giao dịch theo tháng
+        public async Task<BaseResponse> GetTransactionsByMonthAsync(ClaimsPrincipal user, int month, int year)
+        {
+            try
+            {
+                var role = GetRole(user);
+                if (role != "ADMIN")
+                    return Response(403, "Chỉ Admin mới có quyền xem giao dịch theo tháng.");
+
+                var transactions = await _transactionRepository.GetByMonthAsync(month, year);
+
+                var list = transactions.Select(MapToListItemDTO).ToList();
+
+                return Response(200, $"Tìm thấy {list.Count} giao dịch trong tháng {month}/{year}.", list);
+            }
+            catch (Exception ex)
+            {
+                return Response(500, $"Lỗi: {ex.Message}");
+            }
+        }
+        // Thống kê giao dịch theo năm
+        public async Task<BaseResponse> GetTransactionsByYearAsync(ClaimsPrincipal user, int year)
+        {
+            try
+            {
+                var role = GetRole(user);
+                if (role != "ADMIN")
+                    return Response(403, "Chỉ Admin mới có quyền xem giao dịch theo năm.");
+
+                var transactions = await _transactionRepository.GetByYearAsync(year);
+
+                var list = transactions.Select(MapToListItemDTO).ToList();
+
+                return Response(200, $"Tìm thấy {list.Count} giao dịch trong năm {year}.", list);
+            }
+            catch (Exception ex)
+            {
+                return Response(500, $"Lỗi: {ex.Message}");
+            }
+        }
+        // Thống kê giao dịch theo khoảng thời gian
+        public async Task<BaseResponse> GetTransactionsByDateRangeAsync(ClaimsPrincipal user, DateTime startDate, DateTime endDate)
+        {
+            try
+            {
+                var role = GetRole(user);
+                if (role != "ADMIN")
+                    return Response(403, "Chỉ Admin mới có quyền xem giao dịch theo khoảng thời gian.");
+
+                if (startDate > endDate)
+                    return Response(400, "Ngày bắt đầu không được lớn hơn ngày kết thúc.");
+
+                var transactions = await _transactionRepository.GetByDateRangeAsync(startDate, endDate);
+
+                var list = transactions.Select(MapToListItemDTO).ToList();
+
+                return Response(200, $"Tìm thấy {list.Count} giao dịch từ {startDate:dd/MM/yyyy} đến {endDate:dd/MM/yyyy}.", list);
+            }
+            catch (Exception ex)
+            {
+                return Response(500, $"Lỗi: {ex.Message}");
+            }
+        }
     }
 }
