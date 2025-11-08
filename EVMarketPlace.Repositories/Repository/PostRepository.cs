@@ -128,6 +128,7 @@ namespace EVMarketPlace.Repositories.Repository
         {
             return await _context.Posts
                 .Include(p => p.PostImages)
+                .Include(p => p.User)
                 .Include(p => p.Vehicle)
                 .ThenInclude(v => v.Brand)
                 .Include(p => p.Battery)
