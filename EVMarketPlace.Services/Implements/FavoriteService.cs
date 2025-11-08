@@ -9,6 +9,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace EVMarketPlace.Services.Implements
 {
@@ -86,8 +87,9 @@ namespace EVMarketPlace.Services.Implements
             {
                 return new BaseResponse
                 {
-                    Status = StatusCodes.Status404NotFound.ToString(),
-                    Message = "No favorites found"
+                    Status = StatusCodes.Status200OK.ToString(),
+                    Message = "No favorites found",
+                    Data = new List<object>(),
                 };
             }
 
