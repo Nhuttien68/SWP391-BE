@@ -127,6 +127,7 @@ namespace EVMarketPlace.Repositories.Repository
         public async Task<IEnumerable<Post>> GetPostsByUserIdAsync(Guid userId)
         {
             return await _context.Posts
+                 .Include(p => p.User)
                 .Include(p => p.PostImages)
                 .Include(p => p.User)
                 .Include(p => p.Vehicle)
