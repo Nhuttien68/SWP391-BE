@@ -157,9 +157,6 @@ app.UseMiddleware<EVMarketPlace.API.Middleware.GlobalException>();
 
 app.UseHttpsRedirection();
 
-// Áp dụng CORS policy
-app.UseCors("AllowAll");
-
 // Thêm middleware
 app.UseSession();
 
