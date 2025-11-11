@@ -134,11 +134,17 @@ builder.Services.AddCors(options =>
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
-if (app.Environment.IsDevelopment())
+//if (app.Environment.IsDevelopment())
+//{
+//    app.UseSwagger();
+//    app.UseSwaggerUI();
+//}
+app.UseSwagger();
+app.UseSwaggerUI(c =>
 {
-    app.UseSwagger();
-    app.UseSwaggerUI();
-}
+    c.SwaggerEndpoint("/swagger/v1/swagger.json", "EV Marketplace API V1");
+    c.RoutePrefix = "swagger"; // Truy cập Swagger UI tại /swagger
+});
 
 // khởi tạo Firebase Admin SDK
 var credsPath = Path.Combine(builder.Environment.ContentRootPath, "firebase-adminsdk.json");
@@ -156,9 +162,6 @@ app.UseCors("AllowAll"); // Sử dụng CORS để cho phép tất cả các ngu
 app.UseMiddleware<EVMarketPlace.API.Middleware.GlobalException>();
 
 app.UseHttpsRedirection();
-
-// Áp dụng CORS policy
-app.UseCors("AllowAll");
 
 // Thêm middleware
 app.UseSession();
