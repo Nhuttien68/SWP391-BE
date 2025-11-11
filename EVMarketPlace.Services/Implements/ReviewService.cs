@@ -207,8 +207,9 @@ namespace EVMarketPlace.Services.Implements
                 {
                     return new BaseResponse
                     {
-                        Status = StatusCodes.Status404NotFound.ToString(),
-                        Message = "No reviews found for this post."
+                        Status = StatusCodes.Status200OK.ToString(),
+                        Message = "No reviews found",
+                        Data = new List<object>(),
                     };
                 }
 
@@ -292,8 +293,9 @@ namespace EVMarketPlace.Services.Implements
                 {
                     return new BaseResponse
                     {
-                        Status = StatusCodes.Status404NotFound.ToString(),
-                        Message = "No reviews found for this user."
+                        Status = StatusCodes.Status200OK.ToString(),
+                        Message = "No reviews found",
+                        Data = new List<object>(),
                     };
                 }
 
