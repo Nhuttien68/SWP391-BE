@@ -16,13 +16,13 @@ namespace EVMarketPlace.API.Controllers
         {
             _reviewService = reviewService;
         }
-        [HttpPost("Crate-review-for-post")]
+        [HttpPost("Create-review-for-post")]
         public async Task<IActionResult> CreateReviewForPostAsync([FromBody] ReviewCreateDTO dto)
         {
             var response = await _reviewService.CreateReviewForPostAsync(dto);
             return StatusCode(int.Parse(response.Status), response);
         }
-        [HttpPost("Crate-review-for-Seller")]
+        [HttpPost("Create-review-for-Seller")]
         public async Task<IActionResult> CreateReviewForSellerAsync([FromBody] ReviewCreateDTO dto)
         {
             var response = await _reviewService.CreateReviewForSellerAsync(dto);
