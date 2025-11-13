@@ -33,6 +33,12 @@ namespace EVMarketPlace.Services.Implements
             if (post == null)
                 return new BaseResponse { Status = "404", Message = "Post not found" };
 
+            if (post.UserId != userId)
+                return new BaseResponse { Status = "403", Message = "You are not allowed to create an auction for this post" };
+
+            if (req.EndTime <= DateTime.UtcNow)
+                return new BaseResponse { Status = "400", Message = "End time must be in the future" };
+
             var auction = new Auction
             {
                 AuctionId = Guid.NewGuid(),
