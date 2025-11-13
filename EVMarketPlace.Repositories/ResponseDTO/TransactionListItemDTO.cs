@@ -9,5 +9,15 @@ namespace EVMarketPlace.Repositories.ResponseDTO
         public string PaymentMethod { get; set; }
         public DateTime CreatedAt { get; set; }
         public string? PostImageUrl { get; set; }
+        
+        // Thông tin người bán
+        public Guid? SellerId { get; set; }
+        public string? SellerName { get; set; }
+        public string? SellerEmail { get; set; }
+        
+        // Thông tin người mua
+        public Guid? BuyerId { get; set; }
+        public string? BuyerName { get; set; }
+        public string? BuyerEmail { get; set; }
     }
 }

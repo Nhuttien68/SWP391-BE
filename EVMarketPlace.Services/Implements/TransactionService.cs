@@ -660,7 +660,17 @@ namespace EVMarketPlace.Services.Implements
                 Status = t.Status ?? "N/A",
                 PaymentMethod = t.PaymentMethod ?? "N/A",
                 CreatedAt = t.CreatedAt ?? DateTime.UtcNow,
-                PostImageUrl = t.Post?.PostImages?.FirstOrDefault()?.ImageUrl
+                PostImageUrl = t.Post?.PostImages?.FirstOrDefault()?.ImageUrl,
+                
+                // Thông tin người bán
+                SellerId = t.SellerId,
+                SellerName = t.Seller?.FullName ?? "N/A",
+                SellerEmail = t.Seller?.Email,
+                
+                // Thông tin người mua
+                BuyerId = t.BuyerId,
+                BuyerName = t.Buyer?.FullName ?? "N/A",
+                BuyerEmail = t.Buyer?.Email
             };
         }
 
