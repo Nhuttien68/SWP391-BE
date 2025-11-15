@@ -2,6 +2,7 @@
 using EVMarketPlace.Repositories.Repository;
 using EVMarketPlace.Repositories.RequestDTO;
 using EVMarketPlace.Repositories.ResponseDTO;
+using EVMarketPlace.Repositories.Utils;
 using EVMarketPlace.Services.Interfaces;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -14,21 +15,23 @@ namespace EVMarketPlace.Services.Implements
         private readonly TransactionRepository _transactionRepository;
         private readonly IWalletService _walletService;
         private readonly ILogger<AuctionService> _logger;
+        private readonly UserUtility _userUtility;
 
         public AuctionService(
             AuctionRepository auctionRepository,
             TransactionRepository transactionRepository,
             IWalletService walletService,
-            ILogger<AuctionService> logger)
+            ILogger<AuctionService> logger, UserUtility userUtility)
         {
             _auctionRepository = auctionRepository;
             _transactionRepository = transactionRepository;
             _walletService = walletService;
             _logger = logger;
+            _userUtility = userUtility;
         }
 
-        public async Task<BaseResponse> CreateAuctionAsync(Guid userId, CreateAuctionRequest req)
-        {
+        public async Task<BaseResponse> CreateAuctionAsync(CreateAuctionRequest req)
+        { var userId = _userUtility.GetUserIdFromToken();
             var post = await _auctionRepository.GetPostByIdAsync(req.PostId);
             if (post == null)
                 return new BaseResponse { Status = "404", Message = "Post not found" };
@@ -55,15 +58,24 @@ namespace EVMarketPlace.Services.Implements
             {
                 Status = "201",
                 Message = "Auction created successfully",
-                Data = auction
+                Data = new
+                {
+                    auction.AuctionId,
+                    auction.PostId,
+                    auction.StartPrice,
+                    auction.CurrentPrice,
+                    auction.EndTime,
+                    auction.Status
+                }
             };
         }
 
-        public async Task<BaseResponse> PlaceBidAsync(Guid userId, PlaceBidRequest req)
+        public async Task<BaseResponse> PlaceBidAsync( PlaceBidRequest req)
         {
             var auction = await _auctionRepository.GetAuctionWithBidsAsync(req.AuctionId);
             if (auction == null)
                 return new BaseResponse { Status = "404", Message = "Auction not found" };
+            var userId = _userUtility.GetUserIdFromToken();
 
             if (auction.Status != "Active")
                 return new BaseResponse { Status = "400", Message = "Auction not active" };

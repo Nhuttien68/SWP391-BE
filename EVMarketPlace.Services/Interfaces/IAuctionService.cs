@@ -11,8 +11,8 @@ namespace EVMarketPlace.Services.Interfaces
 {
     public interface IAuctionService
     {
-        Task<BaseResponse> CreateAuctionAsync(Guid userId, CreateAuctionRequest req);
-        Task<BaseResponse> PlaceBidAsync(Guid userId, PlaceBidRequest req);
+        Task<BaseResponse> CreateAuctionAsync( CreateAuctionRequest req);
+        Task<BaseResponse> PlaceBidAsync( PlaceBidRequest req);
         Task<List<AuctionCloseResultDTO>> CloseExpiredAuctionsAsync();
         Task<BaseResponse> UpdateTransactionReceiverInfoAsync(Guid transactionId, UpdateTransactionRequest req);
         Task<BaseResponse?> GetAuctionByIdAsync(Guid auctionId);

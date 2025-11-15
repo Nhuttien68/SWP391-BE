@@ -1,13 +1,17 @@
 ﻿using EVMarketPlace.Repositories.RequestDTO;
+using EVMarketPlace.Services.Implements;
 using EVMarketPlace.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
+using Org.BouncyCastle.Ocsp;
 
 namespace EVMarketPlace.API.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
+    [Authorize]
     public class AuctionController : ControllerBase
     {
         private readonly IAuctionService _auctionService;
@@ -20,46 +24,23 @@ namespace EVMarketPlace.API.Controllers
         }
 
         // 1️. Tạo phiên đấu giá mới
-
+        
         [HttpPost("create")]
-        [Authorize] 
+       
         public async Task<IActionResult> CreateAuction([FromBody] CreateAuctionRequest req)
         {
-            try
-            {
-                var userIdClaim = User.FindFirst("UserId")?.Value;
-                if (userIdClaim == null) return Unauthorized("User not authenticated.");
+            var response = await _auctionService.CreateAuctionAsync(req);
+            return StatusCode(int.Parse(response.Status), response);
 
-                var userId = Guid.Parse(userIdClaim);
-                var result = await _auctionService.CreateAuctionAsync(userId, req);
-                return StatusCode(int.Parse(result.Status), result);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "❌ Error creating auction.");
-                return StatusCode(500, new { Message = "Internal server error." });
-            }
         }
 
         // 2️. Đặt giá thầu (Bid)
         [HttpPost("bid")]
-        [Authorize]
+        
         public async Task<IActionResult> PlaceBid([FromBody] PlaceBidRequest req)
-        {
-            try
-            {
-                var userIdClaim = User.FindFirst("UserId")?.Value;
-                if (userIdClaim == null) return Unauthorized("User not authenticated.");
-
-                var userId = Guid.Parse(userIdClaim);
-                var result = await _auctionService.PlaceBidAsync(userId, req);
+        {      
+                var result = await _auctionService.PlaceBidAsync( req);
                 return StatusCode(int.Parse(result.Status), result);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "❌ Error placing bid.");
-                return StatusCode(500, new { Message = "Internal server error." });
-            }
         }
 
         // 3️. Lấy chi tiết 1 phiên đấu giá
@@ -82,7 +63,7 @@ namespace EVMarketPlace.API.Controllers
         // 5️. Cập nhật thông tin người nhận sau khi thắng
 
         [HttpPut("update-transaction/{transactionId}")]
-        [Authorize]
+       
         public async Task<IActionResult> UpdateTransactionReceiver(Guid transactionId, [FromBody] UpdateTransactionRequest req)
         {
             var result = await _auctionService.UpdateTransactionReceiverInfoAsync(transactionId, req);
