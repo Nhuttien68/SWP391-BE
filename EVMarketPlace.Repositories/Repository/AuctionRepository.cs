@@ -44,5 +44,10 @@ namespace EVMarketPlace.Repositories.Repository
         {
             return await _context.Posts.FirstOrDefaultAsync(p => p.PostId == postId);
         }
+
+        public async Task<bool> PostHasAuctionAsync(Guid postId)
+        {
+            return await _context.Auctions.AnyAsync(a => a.PostId == postId);
+        }
     }
 }

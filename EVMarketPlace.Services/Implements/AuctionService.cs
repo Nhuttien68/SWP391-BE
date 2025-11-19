@@ -1,4 +1,5 @@
 ﻿using EVMarketPlace.Repositories.Entity;
+using EVMarketPlace.Repositories.Enum;
 using EVMarketPlace.Repositories.Repository;
 using EVMarketPlace.Repositories.RequestDTO;
 using EVMarketPlace.Repositories.ResponseDTO;
@@ -31,43 +32,66 @@ namespace EVMarketPlace.Services.Implements
         }
 
         public async Task<BaseResponse> CreateAuctionAsync(CreateAuctionRequest req)
-        { var userId = _userUtility.GetUserIdFromToken();
-            var post = await _auctionRepository.GetPostByIdAsync(req.PostId);
-            if (post == null)
-                return new BaseResponse { Status = "404", Message = "Post not found" };
-
-            if (post.UserId != userId)
-                return new BaseResponse { Status = "403", Message = "You are not allowed to create an auction for this post" };
-
-            if (req.EndTime <= DateTime.UtcNow)
-                return new BaseResponse { Status = "400", Message = "End time must be in the future" };
-
-            var auction = new Auction
+        {
+            try
             {
-                AuctionId = Guid.NewGuid(),
-                PostId = req.PostId,
-                StartPrice = req.StartPrice,
-                CurrentPrice = req.StartPrice,
-                EndTime = req.EndTime,
-                Status = "Active"
-            };
+                var userId = _userUtility.GetUserIdFromToken();
+                var post = await _auctionRepository.GetPostByIdAsync(req.PostId);
+                if (post == null)
+                    return new BaseResponse { Status = "404", Message = "Post not found" };
 
-            await _auctionRepository.CreateAsync(auction);
+                if (post.UserId != userId)
+                    return new BaseResponse { Status = "403", Message = "You are not allowed to create an auction for this post" };
 
-            return new BaseResponse
-            {
-                Status = "201",
-                Message = "Auction created successfully",
-                Data = new
+                // Kiểm tra post đã có auction chưa
+                var hasAuction = await _auctionRepository.PostHasAuctionAsync(req.PostId);
+                if (hasAuction)
+                    return new BaseResponse { Status = "400", Message = "This post already has an auction" };
+
+                // Kiểm tra post phải được duyệt mới tạo đấu giá được
+                if (post.Status != PostStatusEnum.APPROVED.ToString())
+                    return new BaseResponse { Status = "400", Message = "Post must be approved before creating an auction" };
+
+                if (req.EndTime <= DateTime.UtcNow)
+                    return new BaseResponse { Status = "400", Message = "End time must be in the future" };
+
+                var auction = new Auction
                 {
-                    auction.AuctionId,
-                    auction.PostId,
-                    auction.StartPrice,
-                    auction.CurrentPrice,
-                    auction.EndTime,
-                    auction.Status
-                }
-            };
+                    AuctionId = Guid.NewGuid(),
+                    PostId = req.PostId,
+                    StartPrice = req.StartPrice,
+                    CurrentPrice = req.StartPrice,
+                    EndTime = req.EndTime,
+                    Status = "Active"
+                };
+
+                await _auctionRepository.CreateAsync(auction);
+
+                return new BaseResponse
+                {
+                    Status = "201",
+                    Message = "Auction created successfully",
+                    Data = new
+                    {
+                        AuctionId = auction.AuctionId,
+                        auction.PostId,
+                        auction.StartPrice,
+                        auction.CurrentPrice,
+                        auction.EndTime,
+                        auction.Status
+                    }
+                };
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                _logger.LogWarning("Unauthorized: {Message}", ex.Message);
+                return new BaseResponse { Status = "401", Message = "Unauthorized - Invalid token" };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error creating auction for PostId: {PostId}", req.PostId);
+                return new BaseResponse { Status = "500", Message = "An unexpected error occurred while creating auction" };
+            }
         }
 
         public async Task<BaseResponse> PlaceBidAsync( PlaceBidRequest req)
