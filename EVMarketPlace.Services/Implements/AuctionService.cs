@@ -158,13 +158,35 @@ namespace EVMarketPlace.Services.Implements
                     continue;
                 }
 
-                // ✅ Trừ tiền người thắng
+                // ✅ Trừ tiền người thắng (buyer)
                 var deduct = await _walletService.DeductAsync(highestBid.UserId.Value, highestBid.BidAmount.Value);
                 if (deduct.Status != "200")
                 {
                     _logger.LogWarning("⚠️ Không thể trừ tiền người thắng {UserId}: {Message}", highestBid.UserId, deduct.Message);
+                    auction.Status = "Failed"; // Đánh dấu đấu giá thất bại
+                    await _auctionRepository.UpdateAsync(auction);
                     continue;
                 }
+
+                // ✅ Cộng tiền cho người bán (seller) - trừ phí 5%
+                decimal platformFee = highestBid.BidAmount.Value * 0.05m; // 5% phí nền tảng
+                decimal sellerAmount = highestBid.BidAmount.Value - platformFee;
+                
+                string auctionTransId = $"AUCTION_{auction.AuctionId}_{DateTime.UtcNow.Ticks}";
+                var addToSeller = await _walletService.TopUpWalletAsync(sellerAmount, auctionTransId, "AuctionPayout", auction.Post.UserId.Value);
+                if (addToSeller.Status != "200")
+                {
+                    _logger.LogWarning("⚠️ Không thể cộng tiền cho seller {SellerId}: {Message}", auction.Post.UserId, addToSeller.Message);
+                    // Hoàn tiền lại cho buyer
+                    string refundTransId = $"REFUND_{auction.AuctionId}_{DateTime.UtcNow.Ticks}";
+                    await _walletService.TopUpWalletAsync(highestBid.BidAmount.Value, refundTransId, "AuctionRefund", highestBid.UserId.Value);
+                    auction.Status = "Failed";
+                    await _auctionRepository.UpdateAsync(auction);
+                    continue;
+                }
+
+                // ✅ Cập nhật WinnerId
+                auction.WinnerId = highestBid.UserId.Value;
 
                 // ✅ Tạo transaction
                 var trans = new Transaction
@@ -179,6 +201,9 @@ namespace EVMarketPlace.Services.Implements
                     CreatedAt = DateTime.UtcNow
                 };
                 await _transactionRepository.CreateAsync(trans);
+                
+                _logger.LogInformation("✅ Auction {AuctionId} closed. Winner: {WinnerId}, Amount: {Amount}", 
+                    auction.AuctionId, highestBid.UserId, highestBid.BidAmount);
 
             }
 
@@ -192,11 +217,39 @@ namespace EVMarketPlace.Services.Implements
 
         public async Task<BaseResponse?> GetAuctionByIdAsync(Guid auctionId)
         {
-            var auction = await _auctionRepository.GetByIdAsync(auctionId);
+            var auction = await _auctionRepository.GetAuctionWithBidsAsync(auctionId);
             if (auction == null)
                 return new BaseResponse { Status = "404", Message = "Auction not found" };
 
-            return new BaseResponse { Status = "200", Message = "Success", Data = auction };
+            var detail = new AuctionDetailDTO
+            {
+                AuctionId = auction.AuctionId,
+                PostId = auction.PostId,
+                StartPrice = auction.StartPrice,
+                CurrentPrice = auction.CurrentPrice,
+                EndTime = auction.EndTime,
+                Status = auction.Status,
+                Post = auction.Post == null ? null : new AuctionPostSummaryDTO
+                {
+                    PostId = auction.Post.PostId,
+                    Title = auction.Post.Title,
+                    Description = auction.Post.Description,
+                    CreatedAt = auction.Post.CreatedAt,
+                    ImageUrls = auction.Post.PostImages?.Select(pi => pi.ImageUrl).ToList()
+                },
+                AuctionBids = auction.AuctionBids
+                    .OrderByDescending(b => b.BidTime)
+                    .Select(b => new AuctionBidHistoryItemDTO
+                    {
+                        BidId = b.BidId,
+                        UserId = b.UserId,
+                        UserName = b.User?.FullName,
+                        BidAmount = b.BidAmount,
+                        BidTime = b.BidTime
+                    }).ToList()
+            };
+
+            return new BaseResponse { Status = "200", Message = "Success", Data = detail };
         }
 
 
