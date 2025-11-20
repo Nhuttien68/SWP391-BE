@@ -30,6 +30,7 @@ namespace EVMarketPlace.Repositories.Repository
         public async Task<IEnumerable<User>> GetAllActiveUsersAsync()
         {
             return await _context.Users
+                .Include(u => u.Wallet)
                 .Where(u => u.Status == UserStatusEnum.ACTIVE.ToString())
                 .ToListAsync();
         }
@@ -37,6 +38,12 @@ namespace EVMarketPlace.Repositories.Repository
         {
             return await _context.Users
                 .CountAsync(u => u.Status == UserStatusEnum.ACTIVE.ToString());
+        }
+
+        public async Task<User?> GetAdminUserAsync()
+        {
+            return await _context.Users
+                .FirstOrDefaultAsync(u => u.Role == "ADMIN" && u.Status == UserStatusEnum.ACTIVE.ToString());
         }
     }
 }

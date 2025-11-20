@@ -107,6 +107,10 @@ namespace EVMarketPlace.Services.Implements
             if (DateTime.UtcNow >= auction.EndTime)
                 return new BaseResponse { Status = "400", Message = "Auction has ended" };
 
+            // Kiểm tra không được đặt giá vào bài đăng của chính mình
+            if (auction.Post != null && auction.Post.UserId == userId)
+                return new BaseResponse { Status = "400", Message = "You cannot bid on your own auction" };
+
             if (req.BidAmount <= auction.CurrentPrice)
                 return new BaseResponse { Status = "400", Message = "Bid must be higher than current price" };
 
@@ -139,22 +143,35 @@ namespace EVMarketPlace.Services.Implements
 
             foreach (var auction in expired)
             {
-                auction.Status = "Ended";
-                var highestBid = auction.AuctionBids
-     .OrderByDescending(b => b.BidAmount)
-     .FirstOrDefault();
+                // ✅ Kiểm tra xem auction đã được xử lý chưa (tránh duplicate processing)
+                if (auction.Status != "Active")
+                {
+                    _logger.LogInformation("⏭️ Auction {AuctionId} already processed (Status: {Status}). Skipping.", 
+                        auction.AuctionId, auction.Status);
+                    continue;
+                }
 
-                auction.Status = "Ended";
+                // ✅ Đánh dấu "Processing" ngay lập tức để tránh race condition
+                auction.Status = "Processing";
+                await _auctionRepository.UpdateAsync(auction);
+
+                var highestBid = auction.AuctionBids
+                    .OrderByDescending(b => b.BidAmount)
+                    .FirstOrDefault();
 
                 if (highestBid == null || highestBid.UserId == null || highestBid.BidAmount == null)
                 {
                     _logger.LogWarning("⚠️ Auction {AuctionId} has no valid bids.", auction.AuctionId);
+                    auction.Status = "Ended"; // Kết thúc mà không có người thắng
+                    await _auctionRepository.UpdateAsync(auction);
                     continue;
                 }
 
                 if (auction.Post == null)
                 {
                     _logger.LogWarning("⚠️ Auction {AuctionId} missing post data.", auction.AuctionId);
+                    auction.Status = "Failed";
+                    await _auctionRepository.UpdateAsync(auction);
                     continue;
                 }
 
@@ -168,12 +185,9 @@ namespace EVMarketPlace.Services.Implements
                     continue;
                 }
 
-                // ✅ Cộng tiền cho người bán (seller) - trừ phí 5%
-                decimal platformFee = highestBid.BidAmount.Value * 0.05m; // 5% phí nền tảng
-                decimal sellerAmount = highestBid.BidAmount.Value - platformFee;
-                
+                // ✅ Cộng tiền cho người bán (seller) - 100% (đã thu 100k phí đăng bài)
                 string auctionTransId = $"AUCTION_{auction.AuctionId}_{DateTime.UtcNow.Ticks}";
-                var addToSeller = await _walletService.TopUpWalletAsync(sellerAmount, auctionTransId, "AuctionPayout", auction.Post.UserId.Value);
+                var addToSeller = await _walletService.TopUpWalletAsync(highestBid.BidAmount.Value, auctionTransId, "AuctionPayout", auction.Post.UserId.Value);
                 if (addToSeller.Status != "200")
                 {
                     _logger.LogWarning("⚠️ Không thể cộng tiền cho seller {SellerId}: {Message}", auction.Post.UserId, addToSeller.Message);
@@ -187,6 +201,7 @@ namespace EVMarketPlace.Services.Implements
 
                 // ✅ Cập nhật WinnerId
                 auction.WinnerId = highestBid.UserId.Value;
+                auction.Status = "Ended"; // ✅ Đánh dấu hoàn thành
 
                 // ✅ Tạo transaction
                 var trans = new Transaction
@@ -201,6 +216,9 @@ namespace EVMarketPlace.Services.Implements
                     CreatedAt = DateTime.UtcNow
                 };
                 await _transactionRepository.CreateAsync(trans);
+                
+                // ✅ Update auction với status "Ended"
+                await _auctionRepository.UpdateAsync(auction);
                 
                 _logger.LogInformation("✅ Auction {AuctionId} closed. Winner: {WinnerId}, Amount: {Amount}", 
                     auction.AuctionId, highestBid.UserId, highestBid.BidAmount);
