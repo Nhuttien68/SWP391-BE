@@ -29,9 +29,16 @@ namespace EVMarketPlace.API.Controllers
        
         public async Task<IActionResult> CreateAuction([FromBody] CreateAuctionRequest req)
         {
-            var response = await _auctionService.CreateAuctionAsync(req);
-            return StatusCode(int.Parse(response.Status), response);
-
+            try
+            {
+                var response = await _auctionService.CreateAuctionAsync(req);
+                return StatusCode(int.Parse(response.Status), response);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error in CreateAuction endpoint");
+                return StatusCode(500, new { Status = "500", Message = "An unexpected error occurred", Data = (object?)null });
+            }
         }
 
         // 2️. Đặt giá thầu (Bid)

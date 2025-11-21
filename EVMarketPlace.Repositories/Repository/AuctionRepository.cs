@@ -13,7 +13,10 @@ namespace EVMarketPlace.Repositories.Repository
         public async Task<Auction?> GetAuctionWithBidsAsync(Guid auctionId)
         {
             return await _context.Auctions
+                .Include(a => a.Post)
+                    .ThenInclude(p => p.PostImages)
                 .Include(a => a.AuctionBids)
+                    .ThenInclude(b => b.User)
                 .FirstOrDefaultAsync(a => a.AuctionId == auctionId);
         }
 
@@ -28,9 +31,13 @@ namespace EVMarketPlace.Repositories.Repository
 
         public async Task<List<Auction>> GetActiveAuctionsAsync()
         {
+            var now = DateTime.UtcNow;
             return await _context.Auctions
                 .Include(a => a.Post)
-                .Where(a => a.Status == "Active")
+                    .ThenInclude(p => p.PostImages)
+                .Include(a => a.AuctionBids)
+                .Where(a => a.Status == "Active" && a.EndTime > now)
+                .OrderBy(a => a.EndTime)
                 .ToListAsync();
         }
 
@@ -43,6 +50,11 @@ namespace EVMarketPlace.Repositories.Repository
         public async Task<Post?> GetPostByIdAsync(Guid postId)
         {
             return await _context.Posts.FirstOrDefaultAsync(p => p.PostId == postId);
+        }
+
+        public async Task<bool> PostHasAuctionAsync(Guid postId)
+        {
+            return await _context.Auctions.AnyAsync(a => a.PostId == postId);
         }
     }
 }

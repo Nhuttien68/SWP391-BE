@@ -1,4 +1,5 @@
 ﻿using EVMarketPlace.Repositories.Entity;
+using EVMarketPlace.Repositories.Enum;
 using EVMarketPlace.Repositories.Repository;
 using EVMarketPlace.Repositories.RequestDTO;
 using EVMarketPlace.Repositories.ResponseDTO;
@@ -31,43 +32,66 @@ namespace EVMarketPlace.Services.Implements
         }
 
         public async Task<BaseResponse> CreateAuctionAsync(CreateAuctionRequest req)
-        { var userId = _userUtility.GetUserIdFromToken();
-            var post = await _auctionRepository.GetPostByIdAsync(req.PostId);
-            if (post == null)
-                return new BaseResponse { Status = "404", Message = "Post not found" };
-
-            if (post.UserId != userId)
-                return new BaseResponse { Status = "403", Message = "You are not allowed to create an auction for this post" };
-
-            if (req.EndTime <= DateTime.UtcNow)
-                return new BaseResponse { Status = "400", Message = "End time must be in the future" };
-
-            var auction = new Auction
+        {
+            try
             {
-                AuctionId = Guid.NewGuid(),
-                PostId = req.PostId,
-                StartPrice = req.StartPrice,
-                CurrentPrice = req.StartPrice,
-                EndTime = req.EndTime,
-                Status = "Active"
-            };
+                var userId = _userUtility.GetUserIdFromToken();
+                var post = await _auctionRepository.GetPostByIdAsync(req.PostId);
+                if (post == null)
+                    return new BaseResponse { Status = "404", Message = "Post not found" };
 
-            await _auctionRepository.CreateAsync(auction);
+                if (post.UserId != userId)
+                    return new BaseResponse { Status = "403", Message = "You are not allowed to create an auction for this post" };
 
-            return new BaseResponse
-            {
-                Status = "201",
-                Message = "Auction created successfully",
-                Data = new
+                // Kiểm tra post đã có auction chưa
+                var hasAuction = await _auctionRepository.PostHasAuctionAsync(req.PostId);
+                if (hasAuction)
+                    return new BaseResponse { Status = "400", Message = "This post already has an auction" };
+
+                // Kiểm tra post phải được duyệt mới tạo đấu giá được
+                if (post.Status != PostStatusEnum.APPROVED.ToString())
+                    return new BaseResponse { Status = "400", Message = "Post must be approved before creating an auction" };
+
+                if (req.EndTime <= DateTime.UtcNow)
+                    return new BaseResponse { Status = "400", Message = "End time must be in the future" };
+
+                var auction = new Auction
                 {
-                    auction.AuctionId,
-                    auction.PostId,
-                    auction.StartPrice,
-                    auction.CurrentPrice,
-                    auction.EndTime,
-                    auction.Status
-                }
-            };
+                    AuctionId = Guid.NewGuid(),
+                    PostId = req.PostId,
+                    StartPrice = req.StartPrice,
+                    CurrentPrice = req.StartPrice,
+                    EndTime = req.EndTime,
+                    Status = "Active"
+                };
+
+                await _auctionRepository.CreateAsync(auction);
+
+                return new BaseResponse
+                {
+                    Status = "201",
+                    Message = "Auction created successfully",
+                    Data = new
+                    {
+                        AuctionId = auction.AuctionId,
+                        auction.PostId,
+                        auction.StartPrice,
+                        auction.CurrentPrice,
+                        auction.EndTime,
+                        auction.Status
+                    }
+                };
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                _logger.LogWarning("Unauthorized: {Message}", ex.Message);
+                return new BaseResponse { Status = "401", Message = "Unauthorized - Invalid token" };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error creating auction for PostId: {PostId}", req.PostId);
+                return new BaseResponse { Status = "500", Message = "An unexpected error occurred while creating auction" };
+            }
         }
 
         public async Task<BaseResponse> PlaceBidAsync( PlaceBidRequest req)
@@ -82,6 +106,10 @@ namespace EVMarketPlace.Services.Implements
 
             if (DateTime.UtcNow >= auction.EndTime)
                 return new BaseResponse { Status = "400", Message = "Auction has ended" };
+
+            // Kiểm tra không được đặt giá vào bài đăng của chính mình
+            if (auction.Post != null && auction.Post.UserId == userId)
+                return new BaseResponse { Status = "400", Message = "You cannot bid on your own auction" };
 
             if (req.BidAmount <= auction.CurrentPrice)
                 return new BaseResponse { Status = "400", Message = "Bid must be higher than current price" };
@@ -115,32 +143,65 @@ namespace EVMarketPlace.Services.Implements
 
             foreach (var auction in expired)
             {
-                auction.Status = "Ended";
-                var highestBid = auction.AuctionBids
-     .OrderByDescending(b => b.BidAmount)
-     .FirstOrDefault();
+                // ✅ Kiểm tra xem auction đã được xử lý chưa (tránh duplicate processing)
+                if (auction.Status != "Active")
+                {
+                    _logger.LogInformation("⏭️ Auction {AuctionId} already processed (Status: {Status}). Skipping.", 
+                        auction.AuctionId, auction.Status);
+                    continue;
+                }
 
-                auction.Status = "Ended";
+                // ✅ Đánh dấu "Processing" ngay lập tức để tránh race condition
+                auction.Status = "Processing";
+                await _auctionRepository.UpdateAsync(auction);
+
+                var highestBid = auction.AuctionBids
+                    .OrderByDescending(b => b.BidAmount)
+                    .FirstOrDefault();
 
                 if (highestBid == null || highestBid.UserId == null || highestBid.BidAmount == null)
                 {
                     _logger.LogWarning("⚠️ Auction {AuctionId} has no valid bids.", auction.AuctionId);
+                    auction.Status = "Ended"; // Kết thúc mà không có người thắng
+                    await _auctionRepository.UpdateAsync(auction);
                     continue;
                 }
 
                 if (auction.Post == null)
                 {
                     _logger.LogWarning("⚠️ Auction {AuctionId} missing post data.", auction.AuctionId);
+                    auction.Status = "Failed";
+                    await _auctionRepository.UpdateAsync(auction);
                     continue;
                 }
 
-                // ✅ Trừ tiền người thắng
+                // ✅ Trừ tiền người thắng (buyer)
                 var deduct = await _walletService.DeductAsync(highestBid.UserId.Value, highestBid.BidAmount.Value);
                 if (deduct.Status != "200")
                 {
                     _logger.LogWarning("⚠️ Không thể trừ tiền người thắng {UserId}: {Message}", highestBid.UserId, deduct.Message);
+                    auction.Status = "Failed"; // Đánh dấu đấu giá thất bại
+                    await _auctionRepository.UpdateAsync(auction);
                     continue;
                 }
+
+                // ✅ Cộng tiền cho người bán (seller) - 100% (đã thu 100k phí đăng bài)
+                string auctionTransId = $"AUCTION_{auction.AuctionId}_{DateTime.UtcNow.Ticks}";
+                var addToSeller = await _walletService.TopUpWalletAsync(highestBid.BidAmount.Value, auctionTransId, "AuctionPayout", auction.Post.UserId.Value);
+                if (addToSeller.Status != "200")
+                {
+                    _logger.LogWarning("⚠️ Không thể cộng tiền cho seller {SellerId}: {Message}", auction.Post.UserId, addToSeller.Message);
+                    // Hoàn tiền lại cho buyer
+                    string refundTransId = $"REFUND_{auction.AuctionId}_{DateTime.UtcNow.Ticks}";
+                    await _walletService.TopUpWalletAsync(highestBid.BidAmount.Value, refundTransId, "AuctionRefund", highestBid.UserId.Value);
+                    auction.Status = "Failed";
+                    await _auctionRepository.UpdateAsync(auction);
+                    continue;
+                }
+
+                // ✅ Cập nhật WinnerId
+                auction.WinnerId = highestBid.UserId.Value;
+                auction.Status = "Ended"; // ✅ Đánh dấu hoàn thành
 
                 // ✅ Tạo transaction
                 var trans = new Transaction
@@ -155,6 +216,12 @@ namespace EVMarketPlace.Services.Implements
                     CreatedAt = DateTime.UtcNow
                 };
                 await _transactionRepository.CreateAsync(trans);
+                
+                // ✅ Update auction với status "Ended"
+                await _auctionRepository.UpdateAsync(auction);
+                
+                _logger.LogInformation("✅ Auction {AuctionId} closed. Winner: {WinnerId}, Amount: {Amount}", 
+                    auction.AuctionId, highestBid.UserId, highestBid.BidAmount);
 
             }
 
@@ -168,11 +235,39 @@ namespace EVMarketPlace.Services.Implements
 
         public async Task<BaseResponse?> GetAuctionByIdAsync(Guid auctionId)
         {
-            var auction = await _auctionRepository.GetByIdAsync(auctionId);
+            var auction = await _auctionRepository.GetAuctionWithBidsAsync(auctionId);
             if (auction == null)
                 return new BaseResponse { Status = "404", Message = "Auction not found" };
 
-            return new BaseResponse { Status = "200", Message = "Success", Data = auction };
+            var detail = new AuctionDetailDTO
+            {
+                AuctionId = auction.AuctionId,
+                PostId = auction.PostId,
+                StartPrice = auction.StartPrice,
+                CurrentPrice = auction.CurrentPrice,
+                EndTime = auction.EndTime,
+                Status = auction.Status,
+                Post = auction.Post == null ? null : new AuctionPostSummaryDTO
+                {
+                    PostId = auction.Post.PostId,
+                    Title = auction.Post.Title,
+                    Description = auction.Post.Description,
+                    CreatedAt = auction.Post.CreatedAt,
+                    ImageUrls = auction.Post.PostImages?.Select(pi => pi.ImageUrl).ToList()
+                },
+                AuctionBids = auction.AuctionBids
+                    .OrderByDescending(b => b.BidTime)
+                    .Select(b => new AuctionBidHistoryItemDTO
+                    {
+                        BidId = b.BidId,
+                        UserId = b.UserId,
+                        UserName = b.User?.FullName,
+                        BidAmount = b.BidAmount,
+                        BidTime = b.BidTime
+                    }).ToList()
+            };
+
+            return new BaseResponse { Status = "200", Message = "Success", Data = detail };
         }
 
 
