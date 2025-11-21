@@ -19,5 +19,6 @@ namespace EVMarketPlace.Services.Interfaces
         Task<BaseResponse> ResendOtpAsync(string email);
         Task<BaseResponse> GetAllUser();
         Task<BaseResponse> CountUser();
+        Task<BaseResponse> UpdateUserStatusAsync(Guid userId, string status);
     }
 }

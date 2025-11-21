@@ -14,7 +14,8 @@ namespace EVMarketPlace.Services.Implements
     {
         private readonly IServiceProvider _serviceProvider;
         private readonly ILogger<AuctionBackgroundService> _logger;
-        private readonly TimeSpan _interval = TimeSpan.FromMinutes(1);
+        // ⏱️ TEST MODE: Check mỗi 10 giây thay vì 1 phút
+        private readonly TimeSpan _interval = TimeSpan.FromSeconds(10);
 
         public AuctionBackgroundService(IServiceProvider serviceProvider, ILogger<AuctionBackgroundService> logger)
         {

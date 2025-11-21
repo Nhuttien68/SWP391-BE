@@ -302,5 +302,49 @@ namespace EVMarketPlace.Services.Implements
             }
 
         }
+
+        public async Task<BaseResponse> UpdateUserStatusAsync(Guid userId, string status)
+        {
+            try
+            {
+                var user = await _userRepository.GetByIdAsync(userId);
+                if (user == null)
+                {
+                    return new BaseResponse
+                    {
+                        Status = StatusCodes.Status404NotFound.ToString(),
+                        Message = "User not found"
+                    };
+                }
+
+                // Validate status
+                if (status != UserStatusEnum.ACTIVE.ToString() && status != UserStatusEnum.INACTIVE.ToString())
+                {
+                    return new BaseResponse
+                    {
+                        Status = StatusCodes.Status400BadRequest.ToString(),
+                        Message = "Invalid status. Must be ACTIVE or INACTIVE"
+                    };
+                }
+
+                user.Status = status;
+                await _userRepository.UpdateAsync(user);
+
+                return new BaseResponse
+                {
+                    Status = StatusCodes.Status200OK.ToString(),
+                    Message = $"User status updated to {status} successfully",
+                    Data = new { UserId = user.UserId, Status = user.Status }
+                };
+            }
+            catch (Exception ex)
+            {
+                return new BaseResponse
+                {
+                    Status = StatusCodes.Status500InternalServerError.ToString(),
+                    Message = "Error updating user status: " + ex.Message
+                };
+            }
+        }
     }
 }

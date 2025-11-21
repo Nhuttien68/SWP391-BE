@@ -133,5 +133,17 @@ namespace EVMarketPlace.API.Controllers
             var response = await _postService.GetPostsByYearAndStatusAsync(year, status);
             return StatusCode(int.Parse(response.Status), response);
         }
+
+        /// <summary>
+        /// Khóa/Mở khóa user (INACTIVE/ACTIVE)
+        /// </summary>
+        [HttpPut("users/{userId}/status")]
+        public async Task<IActionResult> UpdateUserStatus(
+            [FromRoute] Guid userId,
+            [FromQuery] string status)
+        {
+            var response = await _userService.UpdateUserStatusAsync(userId, status);
+            return StatusCode(int.Parse(response.Status), response);
+        }
     }
 }

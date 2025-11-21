@@ -52,7 +52,7 @@ namespace EVMarketPlace.Services.Implements
                 if (post.Status != PostStatusEnum.APPROVED.ToString())
                     return new BaseResponse { Status = "400", Message = "Post must be approved before creating an auction" };
 
-                if (req.EndTime <= DateTime.UtcNow)
+                if (req.EndTime <= DateTime.Now)
                     return new BaseResponse { Status = "400", Message = "End time must be in the future" };
 
                 var auction = new Auction
@@ -104,7 +104,7 @@ namespace EVMarketPlace.Services.Implements
             if (auction.Status != "Active")
                 return new BaseResponse { Status = "400", Message = "Auction not active" };
 
-            if (DateTime.UtcNow >= auction.EndTime)
+            if (DateTime.Now >= auction.EndTime)
                 return new BaseResponse { Status = "400", Message = "Auction has ended" };
 
             // Kiểm tra không được đặt giá vào bài đăng của chính mình
@@ -120,7 +120,7 @@ namespace EVMarketPlace.Services.Implements
                 AuctionId = auction.AuctionId,
                 UserId = userId,
                 BidAmount = req.BidAmount,
-                BidTime = DateTime.UtcNow
+                BidTime = DateTime.Now
             };
 
             auction.CurrentPrice = req.BidAmount;
