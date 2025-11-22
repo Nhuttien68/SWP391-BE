@@ -11,6 +11,7 @@ namespace EVMarketPlace.Repositories.RequestDTO
     {
         [Required(ErrorMessage ="Brand Name not allow null")]
          public string BrandName { get; set; }
+       
     }
     public class VehiCleBrandUpdateRequestDTO
     {

@@ -337,7 +337,7 @@ namespace EVMarketPlace.Services.Implements
                 // Trả về message cụ thể theo từng trạng thái
                 var message = status switch
                 {
-                    var s when s == PostStatusEnum.PENNDING.ToString() => "Sản phẩm đang chờ duyệt và chưa thể mua.",
+                    var s when s == PostStatusEnum.PENDING.ToString() => "Sản phẩm đang chờ duyệt và chưa thể mua.",
                     var s when s == PostStatusEnum.REJECTED.ToString() => "Sản phẩm đã bị từ chối và không thể mua.",
                     var s when s == PostStatusEnum.DELETED.ToString() => "Sản phẩm đã bị xóa và không thể mua.",
                     _ => "Sản phẩm không có sẵn để thêm vào giỏ hàng."

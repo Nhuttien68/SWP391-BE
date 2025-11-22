@@ -146,7 +146,7 @@ namespace EVMarketPlace.Repositories.Repository
                .ThenInclude(v => v.Brand)
                .Include(p => p.Battery)
                .ThenInclude(b => b.Brand)
-               .Where(p => p.Status == PostStatusEnum.PENNDING.ToString())
+               .Where(p => p.Status == PostStatusEnum.PENDING.ToString())
                .ToListAsync();
         }
         // Đếm tổng số bài đăng

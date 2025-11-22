@@ -257,7 +257,7 @@ namespace EVMarketPlace.Services.Implements
                 {
                     var statusMessage = post.Status switch
                     {
-                        var s when s == PostStatusEnum.PENNDING.ToString() => "Sản phẩm đang chờ duyệt.",
+                        var s when s == PostStatusEnum.PENDING.ToString() => "Sản phẩm đang chờ duyệt.",
                         var s when s == PostStatusEnum.REJECTED.ToString() => "Sản phẩm đã bị từ chối.",
                         var s when s == PostStatusEnum.SOLD.ToString() => "Sản phẩm đã được bán.",
                         var s when s == PostStatusEnum.DELETED.ToString() => "Sản phẩm đã bị xóa.",

@@ -28,6 +28,7 @@ namespace EVMarketPlace.Services.Implements
                 {
                     BrandId = Guid.NewGuid(),
                     Name = requestDTO.BrandName,
+                    Status = "Active"
                 };
                 await _vehicleBrandRepository.CreateAsync(newbrand);
                 var response = new VehicleBrandResponseDTO
@@ -60,12 +61,11 @@ namespace EVMarketPlace.Services.Implements
             {
                 return new BaseResponse
                 {
-                    Status = StatusCodes.Status404NotFound.ToString(),
                     Message = "Vehicle brand not found.",
-
                 };
             }
-            await _vehicleBrandRepository.RemoveAsync(brand);
+            brand.Status = "Inactive";
+            await _vehicleBrandRepository.UpdateAsync(brand);
             return new BaseResponse
             {
                 Status = StatusCodes.Status200OK.ToString(),
@@ -79,7 +79,7 @@ namespace EVMarketPlace.Services.Implements
         {
             try
             {
-                var brands = await _vehicleBrandRepository.GetAllAsync();
+                var brands = await _vehicleBrandRepository.GetAllVehicleBrandAsync();
                 var brandDTOs = brands.Select(b => new VehicleBrandResponseDTO
                 {
                     BrandId = b.BrandId,

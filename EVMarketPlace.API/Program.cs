@@ -60,7 +60,7 @@ builder.Services.AddScoped<FavoriteRepositori>();
 builder.Services.AddScoped<TransactionRepository>();
 builder.Services.AddScoped<ReviewRepository>();
 builder.Services.AddScoped<PostPackageRepository>();
-
+builder.Services.AddScoped<WalletTransactionRepository>();
 // Add Cart Repositories
 builder.Services.AddScoped<CartRepository>();
 builder.Services.AddScoped<CartItemRepository>();

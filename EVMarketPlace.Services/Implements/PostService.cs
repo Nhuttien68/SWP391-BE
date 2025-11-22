@@ -20,13 +20,17 @@ namespace EVMarketPlace.Services.Implements
         private readonly UserUtility _userUtility;
         private readonly WalletRepository _walletRepository;
         private readonly FirebaseStorageService _firebaseStorage;
-        
-        public PostService(WalletRepository walletRepositpry, PostRepository postRepository , UserUtility userUtility, FirebaseStorageService firebaseStorage, PostImageRepository postImageRepository)
+        private readonly PostPackageRepository _postPackageRepository;
+        private readonly WalletTransactionRepository _walletTransactionRepository;
+
+        public PostService(WalletTransactionRepository walletTransactionRepository, WalletRepository walletRepositpry, PostRepository postRepository , UserUtility userUtility, FirebaseStorageService firebaseStorage, PostImageRepository postImageRepository, PostPackageRepository postPackageRepository)
         {
             _postRepository = postRepository;
             _userUtility = userUtility;
             _firebaseStorage = firebaseStorage;
             _walletRepository = walletRepositpry;
+            _postPackageRepository = postPackageRepository;
+            _walletTransactionRepository = walletTransactionRepository;
         }
 
         public async Task<BaseResponse> ApprovedStatus(Guid id)
@@ -108,12 +112,19 @@ namespace EVMarketPlace.Services.Implements
                 var userId = _userUtility.GetUserIdFromToken();
                 if (userId == Guid.Empty)
                     throw new UnauthorizedAccessException("User ID not found in token.");
+
+                // Lấy ví người dùng
                 var wallet = await _walletRepository.GetWalletByUserIdAsync(userId);
                 if (wallet == null)
                     throw new Exception("Wallet not found for the user.");
-                var walletResult = await _walletRepository.TryUpdateBalanceAsync(wallet.WalletId, -100000);
 
-                if (!walletResult.Success)
+                // Lấy thông tin gói đăng bài
+                var postPackage = await _postPackageRepository.GetByIdAsync(request.postPackgeID);
+                if (postPackage == null || !postPackage.IsActive.GetValueOrDefault())
+                    throw new Exception("Package not found or inactive.");
+
+                // Kiểm tra số dư
+                if (wallet.Balance < postPackage.Price)
                 {
                     return new BaseResponse
                     {
@@ -122,16 +133,47 @@ namespace EVMarketPlace.Services.Implements
                         Data = null
                     };
                 }
+
+                // Trừ tiền trong ví
+                var walletResult = await _walletRepository.TryUpdateBalanceAsync(wallet.WalletId, -postPackage.Price);
+                if (!walletResult.Success)
+                {
+                    return new BaseResponse
+                    {
+                        Status = "400",
+                        Message = "Cập nhật số dư ví thất bại.",
+                        Data = null
+                    };
+                }
+
+                // Tạo giao dịch WalletTransaction
+                var transaction = new WalletTransaction
+                {
+                    WalletTransactionId = Guid.NewGuid(),
+                    WalletId = wallet.WalletId,
+                    TransactionType = "POSTING",
+                    Amount = postPackage.Price,
+                    BalanceBefore = wallet.Balance,
+                    BalanceAfter = wallet.Balance - postPackage.Price,
+                    Description = $"Trừ phí đăng bài ({postPackage.PackageName})",
+                    CreatedAt = DateTime.UtcNow
+                };
+                await _walletTransactionRepository.CreateAsync(transaction);
+
+                // Tạo bài đăng
                 var newPost = new Post
                 {
                     PostId = Guid.NewGuid(),
+                    PackageId = postPackage.PackageId,
+                    PackagePrice = postPackage.Price, // lưu giá gói tại thời điểm mua
                     UserId = userId,
                     Type = PostTypeEnum.BATTERY.ToString(),
                     Title = request.Title,
                     Description = request.Description,
                     Price = request.Price,
                     CreatedAt = DateTime.UtcNow,
-                    Status = PostStatusEnum.PENNDING.ToString(),
+                    ExpireAt = DateTime.UtcNow.AddDays(postPackage.DurationInDays), // tính ngày hết hạn
+                    Status = PostStatusEnum.PENDING.ToString(),
                     PostImages = new List<PostImage>(),
                     Battery = new Battery
                     {
@@ -142,7 +184,7 @@ namespace EVMarketPlace.Services.Implements
                     }
                 };
 
-                // ✅ Upload ảnh
+                // Upload ảnh
                 if (request.Images != null && request.Images.Count > 0)
                 {
                     foreach (var image in request.Images)
@@ -161,14 +203,16 @@ namespace EVMarketPlace.Services.Implements
                                 ImageId = Guid.NewGuid(),
                                 PostId = newPost.PostId,
                                 ImageUrl = imageUrl,
-                                UploadedAt = DateTime.Now,
+                                UploadedAt = DateTime.UtcNow,
                             };
                             newPost.PostImages.Add(postImage);
                         }
                     }
                 }
+
                 await _postRepository.CreateAsync(newPost);
-                // ✅ Map sang DTO
+
+                // Map sang DTO
                 var postDto = new PostResponseDto
                 {
                     PostId = newPost.PostId,
@@ -180,6 +224,7 @@ namespace EVMarketPlace.Services.Implements
                     Status = newPost.Status,
                     ImageUrls = newPost.PostImages.Select(i => i.ImageUrl).ToList(),
                 };
+
                 return new BaseResponse
                 {
                     Status = StatusCodes.Status201Created.ToString(),
@@ -196,6 +241,7 @@ namespace EVMarketPlace.Services.Implements
                 };
             }
         }
+
         // Tạo bài đăng về xe
         public async Task<BaseResponse> CreateVehiclePostAsync(PostCreateVehicleRequest request)
         {
@@ -228,7 +274,7 @@ namespace EVMarketPlace.Services.Implements
                     Description = request.Description,
                     Price = request.Price,
                     CreatedAt = DateTime.UtcNow,
-                    Status = PostStatusEnum.PENNDING.ToString(),
+                    Status = PostStatusEnum.PENDING.ToString(),
 
                     PostImages = new List<PostImage>(),
                     Vehicle = new Vehicle

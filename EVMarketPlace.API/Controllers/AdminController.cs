@@ -78,7 +78,7 @@ namespace EVMarketPlace.API.Controllers
         [HttpGet("posts/count/pending")]
         public async Task<IActionResult> CountPendingPosts()
         {
-            var response = await _postService.CountPostsByStatusAsync(PostStatusEnum.PENNDING);
+            var response = await _postService.CountPostsByStatusAsync(PostStatusEnum.PENDING);
             return StatusCode(int.Parse(response.Status), response);
         }
 
