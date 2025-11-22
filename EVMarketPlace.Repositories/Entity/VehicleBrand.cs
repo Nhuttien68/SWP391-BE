@@ -9,5 +9,7 @@ public partial class VehicleBrand
 
     public string Name { get; set; } = null!;
 
+    public string? Status { get; set; }
+
     public virtual ICollection<Vehicle> Vehicles { get; set; } = new List<Vehicle>();
 }

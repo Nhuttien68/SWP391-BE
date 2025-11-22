@@ -126,7 +126,7 @@ namespace EVMarketPlace.Services.Implements
                             post.Price ?? 0,
                             Guid.NewGuid().ToString(),
                             "TRANSACTION",
-                            post.UserId ?? Guid.Empty
+                            post.UserId 
                         );
 
                         if (int.Parse(topUpResult.Status) != 200)
@@ -135,7 +135,7 @@ namespace EVMarketPlace.Services.Implements
                             break;
                         }
 
-                        paidSellers.Add((post.UserId ?? Guid.Empty, post.Price ?? 0));
+                        paidSellers.Add((post.UserId , post.Price ?? 0));
                     }
 
                     // Nếu có lỗi, rollback TOÀN BỘ
@@ -287,7 +287,7 @@ namespace EVMarketPlace.Services.Implements
                         post.Price ?? 0,
                         Guid.NewGuid().ToString(),
                         "TRANSACTION",
-                        post.UserId ?? Guid.Empty
+                        post.UserId
                     );
 
                     if (int.Parse(topUpResult.Status) != 200)

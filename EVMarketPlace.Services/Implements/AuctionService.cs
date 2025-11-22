@@ -187,7 +187,7 @@ namespace EVMarketPlace.Services.Implements
 
                 // ✅ Cộng tiền cho người bán (seller) - 100% (đã thu 100k phí đăng bài)
                 string auctionTransId = $"AUCTION_{auction.AuctionId}_{DateTime.UtcNow.Ticks}";
-                var addToSeller = await _walletService.TopUpWalletAsync(highestBid.BidAmount.Value, auctionTransId, "AuctionPayout", auction.Post.UserId.Value);
+                var addToSeller = await _walletService.TopUpWalletAsync(highestBid.BidAmount.Value, auctionTransId, "AuctionPayout", auction.Post.UserId);
                 if (addToSeller.Status != "200")
                 {
                     _logger.LogWarning("⚠️ Không thể cộng tiền cho seller {SellerId}: {Message}", auction.Post.UserId, addToSeller.Message);

@@ -9,5 +9,7 @@ public partial class BatteryBrand
 
     public string Name { get; set; } = null!;
 
+    public string? Status { get; set; }
+
     public virtual ICollection<Battery> Batteries { get; set; } = new List<Battery>();
 }

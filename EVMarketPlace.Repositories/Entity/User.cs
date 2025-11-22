@@ -40,4 +40,8 @@ public partial class User
     public virtual ICollection<Transaction> TransactionSellers { get; set; } = new List<Transaction>();
 
     public virtual Wallet? Wallet { get; set; }
+
+    public virtual ICollection<WithdrawalRequest> WithdrawalRequestProcessedByNavigations { get; set; } = new List<WithdrawalRequest>();
+
+    public virtual ICollection<WithdrawalRequest> WithdrawalRequestUsers { get; set; } = new List<WithdrawalRequest>();
 }

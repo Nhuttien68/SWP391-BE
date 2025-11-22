@@ -673,7 +673,7 @@ namespace EVMarketPlace.Services.Implements
                     };
                 }
 
-                var userWallet = await _walletRepository.GetWalletByUserIdAsync(post.UserId.Value);
+                var userWallet = await _walletRepository.GetWalletByUserIdAsync(post.UserId);
                 if (userWallet == null)
                 {
                     return new BaseResponse

@@ -13,6 +13,8 @@ public partial class Auction
 
     public decimal? CurrentPrice { get; set; }
 
+    public decimal? BidStep { get; set; }
+
     public DateTime? EndTime { get; set; }
 
     public string? Status { get; set; }
