@@ -31,6 +31,7 @@ namespace EVMarketPlace.Services.Implements
                 {
                     BrandId = Guid.NewGuid(),
                     Name = requestDTO.BrandName,
+                    Status = "Active"
 
                 };
                 
@@ -70,9 +71,10 @@ namespace EVMarketPlace.Services.Implements
             {
                 return new BaseResponse
                 {
-                    Status = StatusCodes.Status404NotFound.ToString(),
                     Message = "Battery brand not found",
                 };
+                existingBrand.Status = "Inactive";
+                await _batteryBrandRepository.UpdateAsync(existingBrand);
             }
             try
             {
@@ -97,13 +99,15 @@ namespace EVMarketPlace.Services.Implements
 
         public async Task<BaseResponse> GetAllBatteryAsync()
         {
+            // await để lấy IEnumerable<BatteryBrand>
+            var brands = await _batteryBrandRepository.GetAllBatteryBrandAsync();
 
-            var brands = _batteryBrandRepository.GetAll();
             var brandList = brands.Select(b => new BatteryBrandResponseDTO
             {
                 BrandId = b.BrandId,
-                BrandName = b.Name
+                BrandName = b.Name,
             }).ToList();
+
             return new BaseResponse
             {
                 Status = StatusCodes.Status200OK.ToString(),
@@ -111,6 +115,7 @@ namespace EVMarketPlace.Services.Implements
                 Data = brandList
             };
         }
+
 
         public async Task<BaseResponse> GetBatteryByIdAsync(Guid BrandBatteryId)
         {
@@ -146,10 +151,9 @@ namespace EVMarketPlace.Services.Implements
             {
                 return new BaseResponse
                 {
-                    Status = StatusCodes.Status404NotFound.ToString(),
                     Message = "Battery brand not found",
-
                 };
+                await _batteryBrandRepository.UpdateAsync(existingBrand);
             }
             try
             {
