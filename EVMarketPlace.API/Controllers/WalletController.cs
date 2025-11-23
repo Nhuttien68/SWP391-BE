@@ -56,5 +56,15 @@ namespace EVMarketPlace.API.Controllers
             var balance = await _walletService.GetBalanceAsync();
             return Ok(new { balance });
         }
+
+        /// <summary>
+        /// Lấy lịch sử giao dịch ví
+        /// </summary>
+        [HttpGet("transaction-history")]
+        public async Task<IActionResult> GetTransactionHistory()
+        {
+            var response = await _walletService.GetWalletTransactionHistoryAsync();
+            return StatusCode(int.Parse(response.Status), response);
+        }
     }
 }

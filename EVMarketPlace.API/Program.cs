@@ -43,6 +43,8 @@ builder.Services.AddScoped<IFavoriteService, FavoriteService>();
 builder.Services.AddScoped<IAuctionService, AuctionService>();
 builder.Services.AddScoped<IReviewService, ReviewService>();
 builder.Services.AddScoped<IPostPackgeService, PostPackgeService>();
+builder.Services.AddScoped<IWithdrawalService, WithdrawalService>();
+
 // Add Cart Service
 builder.Services.AddScoped<ICartService, CartService>();
 // Add Transaction Service
@@ -61,6 +63,7 @@ builder.Services.AddScoped<TransactionRepository>();
 builder.Services.AddScoped<ReviewRepository>();
 builder.Services.AddScoped<PostPackageRepository>();
 builder.Services.AddScoped<WalletTransactionRepository>();
+builder.Services.AddScoped<WithdrawalRequestRepository>();
 // Add Cart Repositories
 builder.Services.AddScoped<CartRepository>();
 builder.Services.AddScoped<CartItemRepository>();
