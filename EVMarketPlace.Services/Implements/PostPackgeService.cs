@@ -95,7 +95,7 @@ namespace EVMarketPlace.Services.Implements
                         Id = pp.PackageId,
                         PackageName = pp.PackageName,
                         Price = pp.Price,
-                        Description = pp.DurationInDays,
+                        DurationInDays = pp.DurationInDays,
                         CreatedAt = pp.CreatedAt ?? DateTime.MinValue,
                         isActive = pp.IsActive
                     }
@@ -137,7 +137,7 @@ namespace EVMarketPlace.Services.Implements
                         Id = postPackage.PackageId,
                         PackageName = postPackage.PackageName,
                         Price = postPackage.Price,
-                        Description = postPackage.DurationInDays,
+                        DurationInDays = postPackage.DurationInDays,
                         CreatedAt = postPackage.CreatedAt ?? DateTime.MinValue,
                         isActive = postPackage.IsActive
                     }

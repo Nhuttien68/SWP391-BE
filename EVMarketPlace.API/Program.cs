@@ -72,6 +72,7 @@ builder.Services.Configure<VnPayConfig>(builder.Configuration.GetSection("VnPay"
 builder.Services.AddScoped<IPaymentService, PaymentService>();
 // Add Auction Background Service
 builder.Services.AddHostedService<AuctionBackgroundService>();
+builder.Services.AddHostedService<PostExpirationService>();
 // Add session services
 builder.Services.AddDistributedMemoryCache();
 builder.Services.AddSession(options =>

@@ -1,6 +1,7 @@
 ﻿using EVMarketPlace.Repositories.Entity;
 using EVMarketPlace.Repositories.Enum;
 using EVMarketPlace.Repositories.Repository;
+using EVMarketPlace.Repositories.RequestDTO;
 using EVMarketPlace.Repositories.RequestDTO.Posts;
 using EVMarketPlace.Repositories.ResponseDTO;
 using EVMarketPlace.Repositories.ResponseDTO.Posts;
@@ -44,6 +45,29 @@ namespace EVMarketPlace.Services.Implements
                     Message = "Unauthorized: admin user id not found"
                 };
             }
+
+            var post = await _postRepository.GetByIdAsync(id);
+            if (post == null)
+            {
+                return new BaseResponse
+                {
+                    Status = StatusCodes.Status404NotFound.ToString(),
+                    Message = "Post not found"
+                };
+            }
+
+            // Lấy thông tin gói của bài đăng
+            var postPackage = await _postPackageRepository.GetByIdAsync(post.PackageId);
+            if (postPackage == null)
+            {
+                return new BaseResponse
+                {
+                    Status = StatusCodes.Status500InternalServerError.ToString(),
+                    Message = "Post package not found"
+                };
+            }
+
+            // Admin nhận tiền phí duyệt theo giá của postPackage
             var adminWallet = await _walletRepository.GetWalletByUserIdAsync(adminUserId);
             if (adminWallet == null)
             {
@@ -54,7 +78,7 @@ namespace EVMarketPlace.Services.Implements
                 };
             }
 
-            var walletResult = await _walletRepository.TryUpdateBalanceAsync(adminWallet.WalletId, 100000);
+            var walletResult = await _walletRepository.TryUpdateBalanceAsync(adminWallet.WalletId, postPackage.Price);
             if (!walletResult.Success)
             {
                 return new BaseResponse
@@ -63,23 +87,36 @@ namespace EVMarketPlace.Services.Implements
                     Message = "Failed to credit admin wallet"
                 };
             }
-            var post = await _postRepository.GetByIdAsync(id);
-            if (post == null) {
-                return new BaseResponse
-                {
-                    Status = StatusCodes.Status404NotFound.ToString(),
-                    Message = "post not found"
-                };
-            }
+
+            // Tạo giao dịch WalletTransaction cho admin
+            var transaction = new WalletTransaction
+            {
+                WalletTransactionId = Guid.NewGuid(),
+                WalletId = adminWallet.WalletId,
+                TransactionType = "POST_APPROVAL_FEE",
+                Amount = postPackage.Price,
+                BalanceBefore = adminWallet.Balance,
+                BalanceAfter = adminWallet.Balance + postPackage.Price,
+                Description = $"Nhận phí duyệt bài ({postPackage.PackageName})",
+                CreatedAt = DateTime.UtcNow
+            };
+            await _walletTransactionRepository.CreateAsync(transaction);
+
+            // Cập nhật trạng thái bài đăng và thời gian hết hạn
             post.Status = PostStatusEnum.APPROVED.ToString();
+            post.ExpireAt = post.CreatedAt.Value.AddDays(postPackage.DurationInDays);
+
             await _postRepository.UpdateAsync(post);
+
             return new BaseResponse
             {
                 Status = StatusCodes.Status200OK.ToString(),
-                Message = "change status post success",
+                Message = "Post approved successfully. ExpireAt has been set.",
+                Data = new { post.PostId, post.ExpireAt }
             };
-            
         }
+
+
 
         public async Task<BaseResponse> CountPostsByStatusAsync(PostStatusEnum status)
         {
@@ -152,6 +189,7 @@ namespace EVMarketPlace.Services.Implements
                     WalletTransactionId = Guid.NewGuid(),
                     WalletId = wallet.WalletId,
                     TransactionType = "POSTING",
+                    PaymentMethod = "WALLET",
                     Amount = postPackage.Price,
                     BalanceBefore = wallet.Balance,
                     BalanceAfter = wallet.Balance - postPackage.Price,
@@ -247,16 +285,22 @@ namespace EVMarketPlace.Services.Implements
         {
             try
             {
-                
-                var userId =  _userUtility.GetUserIdFromToken();
+                var userId = _userUtility.GetUserIdFromToken();
                 if (userId == Guid.Empty)
                     throw new UnauthorizedAccessException("User ID not found in token.");
+
+                // Lấy ví người dùng
                 var wallet = await _walletRepository.GetWalletByUserIdAsync(userId);
                 if (wallet == null)
                     throw new Exception("Wallet not found for the user.");
-                var walletResult = await _walletRepository.TryUpdateBalanceAsync(wallet.WalletId, -100000);
 
-                if (!walletResult.Success)
+                // Lấy thông tin gói đăng bài
+                var postPackage = await _postPackageRepository.GetByIdAsync(request.postPackgeID);
+                if (postPackage == null || !postPackage.IsActive.GetValueOrDefault())
+                    throw new Exception("Package not found or inactive.");
+
+                // Kiểm tra số dư
+                if (wallet.Balance < postPackage.Price)
                 {
                     return new BaseResponse
                     {
@@ -265,15 +309,47 @@ namespace EVMarketPlace.Services.Implements
                         Data = null
                     };
                 }
+
+                // Trừ tiền trong ví
+                var walletResult = await _walletRepository.TryUpdateBalanceAsync(wallet.WalletId, -postPackage.Price);
+                if (!walletResult.Success)
+                {
+                    return new BaseResponse
+                    {
+                        Status = "400",
+                        Message = "Cập nhật số dư ví thất bại.",
+                        Data = null
+                    };
+                }
+
+                // Tạo giao dịch WalletTransaction
+                var transaction = new WalletTransaction
+                {
+                    WalletTransactionId = Guid.NewGuid(),
+                    WalletId = wallet.WalletId,
+                    TransactionType = "POSTING",
+                    Amount = postPackage.Price,
+                    BalanceBefore = wallet.Balance,
+                    PaymentMethod = "WALLET",
+                    BalanceAfter = wallet.Balance - postPackage.Price,
+                    Description = $"Trừ phí đăng bài ({postPackage.PackageName})",
+                    CreatedAt = DateTime.UtcNow
+                };
+                await _walletTransactionRepository.CreateAsync(transaction);
+
+                // Tạo bài đăng
                 var newPost = new Post
                 {
                     PostId = Guid.NewGuid(),
+                    PackageId = postPackage.PackageId,
+                    PackagePrice = postPackage.Price,
                     UserId = userId,
                     Type = PostTypeEnum.VEHICLE.ToString(),
                     Title = request.Title,
                     Description = request.Description,
                     Price = request.Price,
                     CreatedAt = DateTime.UtcNow,
+                    ExpireAt = DateTime.UtcNow.AddDays(postPackage.DurationInDays),
                     Status = PostStatusEnum.PENDING.ToString(),
 
                     PostImages = new List<PostImage>(),
@@ -287,7 +363,7 @@ namespace EVMarketPlace.Services.Implements
                     }
                 };
 
-                // ✅ Upload ảnh
+                // Upload ảnh
                 if (request.Images != null && request.Images.Count > 0)
                 {
                     foreach (var image in request.Images)
@@ -306,7 +382,7 @@ namespace EVMarketPlace.Services.Implements
                                 ImageId = Guid.NewGuid(),
                                 PostId = newPost.PostId,
                                 ImageUrl = imageUrl,
-                                UploadedAt = DateTime.Now,
+                                UploadedAt = DateTime.UtcNow,
                             };
                             newPost.PostImages.Add(postImage);
                         }
@@ -314,9 +390,8 @@ namespace EVMarketPlace.Services.Implements
                 }
 
                 await _postRepository.CreateAsync(newPost);
-               
 
-                // ✅ Map sang DTO
+                // DTO trả về
                 var postDto = new PostResponseDto
                 {
                     PostId = newPost.PostId,
@@ -345,6 +420,8 @@ namespace EVMarketPlace.Services.Implements
                 };
             }
         }
+
+
         // Xóa bài đăng (soft delete)
         public async Task<BaseResponse> DeletePostAsync(Guid postId)
         {
@@ -421,6 +498,15 @@ namespace EVMarketPlace.Services.Implements
                     Phone = p.User.Phone,
                     Status = p.User.Status,
                     Role = p.User.Role
+                },
+                PostDetail = new PostPackgeDTOResponse
+                {
+                    Id = p.Package.PackageId,
+                    PackageName = p.Package.PackageName,
+                    Price = p.Package.Price,
+                    DurationInDays = p.Package.DurationInDays,
+                    CreatedAt = p.Package.CreatedAt,
+                    isActive = p.Package.IsActive
                 }
             }).ToList();
 
@@ -695,11 +781,12 @@ namespace EVMarketPlace.Services.Implements
         }
 
         // Từ chối bài đăng và hoàn tiền
-        public async Task<BaseResponse> RejectStatusAsync(Guid PostId)
+        public async Task<BaseResponse> RejectStatusAsync(Guid postId)
         {
             try
             {
-                var post = await _postRepository.GetByIdAsync(PostId);
+                // Lấy bài đăng
+                var post = await _postRepository.GetByIdAsync(postId);
                 if (post == null)
                 {
                     return new BaseResponse
@@ -708,8 +795,12 @@ namespace EVMarketPlace.Services.Implements
                         Message = "Post not found."
                     };
                 }
+
+                // Cập nhật trạng thái bài đăng
                 post.Status = PostStatusEnum.REJECTED.ToString();
                 await _postRepository.UpdateAsync(post);
+
+                // Kiểm tra UserId hợp lệ
                 if (post.UserId == null || post.UserId == Guid.Empty)
                 {
                     return new BaseResponse
@@ -719,6 +810,7 @@ namespace EVMarketPlace.Services.Implements
                     };
                 }
 
+                // Lấy ví người dùng
                 var userWallet = await _walletRepository.GetWalletByUserIdAsync(post.UserId);
                 if (userWallet == null)
                 {
@@ -729,7 +821,19 @@ namespace EVMarketPlace.Services.Implements
                     };
                 }
 
-                var walletResult = await _walletRepository.TryUpdateBalanceAsync(userWallet.WalletId, 100000m);
+                // Lấy giá gói đăng bài
+                var postPackage = await _postPackageRepository.GetByIdAsync(post.PackageId);
+                if (postPackage == null)
+                {
+                    return new BaseResponse
+                    {
+                        Status = StatusCodes.Status500InternalServerError.ToString(),
+                        Message = "Post package not found."
+                    };
+                }
+
+                // Hoàn tiền về ví người đăng bài
+                var walletResult = await _walletRepository.TryUpdateBalanceAsync(userWallet.WalletId, postPackage.Price);
                 if (!walletResult.Success)
                 {
                     return new BaseResponse
@@ -739,11 +843,29 @@ namespace EVMarketPlace.Services.Implements
                     };
                 }
 
+                // Tạo WalletTransaction ghi lại giao dịch hoàn tiền
+                var transaction = new WalletTransaction
+                {
+                    WalletTransactionId = Guid.NewGuid(),
+                    WalletId = userWallet.WalletId,
+                    TransactionType = "POST_REJECT_REFUND",
+                    Amount = postPackage.Price,
+                    BalanceBefore = userWallet.Balance,
+                    BalanceAfter = userWallet.Balance + postPackage.Price,
+                    Description = $"Hoàn tiền gói đăng bài ({postPackage.PackageName}) do bài bị từ chối",
+                    CreatedAt = DateTime.UtcNow
+                };
+                await _walletTransactionRepository.CreateAsync(transaction);
+
                 return new BaseResponse
                 {
                     Status = StatusCodes.Status200OK.ToString(),
-                    Message = "Post rejected and 100,000 refunded to user.",
-                    Data = new { UserNewBalance = walletResult.NewBalance }
+                    Message = $"Post rejected and {postPackage.Price} refunded to user.",
+                    Data = new
+                    {
+                        PostId = post.PostId,
+                        UserNewBalance = walletResult.NewBalance
+                    }
                 };
             }
             catch (Exception ex)
@@ -755,6 +877,8 @@ namespace EVMarketPlace.Services.Implements
                 };
             }
         }
+
+
         // Cập nhật bài đăng về pin
         public async Task<BaseResponse> UpdateBatteryPostAsync(UpdateBatteryPostRequest request)
         {

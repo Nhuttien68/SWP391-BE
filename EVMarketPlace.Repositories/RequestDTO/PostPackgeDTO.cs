@@ -29,9 +29,9 @@ namespace EVMarketPlace.Repositories.RequestDTO
         public Guid Id { get; set; }
         public string PackageName { get; set; }
         public decimal Price { get; set; }
-        public int  Description { get; set; }
+        public int DurationInDays { get; set; }
         
-        public DateTime CreatedAt { get; set; }
+        public DateTime? CreatedAt { get; set; }
 
         public bool? isActive { get; set; }    
     }

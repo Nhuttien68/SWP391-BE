@@ -17,6 +17,7 @@ namespace EVMarketPlace.Repositories.Enum
         REJECTED,
         APPROVED,
         SOLD,
-        DELETED
+        DELETED,
+        EXPIRED
     }
 }

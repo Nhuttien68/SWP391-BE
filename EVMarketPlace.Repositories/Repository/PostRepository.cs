@@ -15,6 +15,18 @@ namespace EVMarketPlace.Repositories.Repository
         public PostRepository(EvMarketplaceContext context) : base(context)
         {
         }
+        // Ẩn bài đăng hết hạn
+        public async Task HideExpiredPostsAsync()
+        {
+            await _context.Posts
+                .Where(p => p.ExpireAt < DateTime.UtcNow
+                            && p.Status == PostStatusEnum.APPROVED.ToString())
+                .ExecuteUpdateAsync(p => p
+                    .SetProperty(x => x.Status, PostStatusEnum.EXPIRED.ToString()));
+        }
+
+
+
         public async Task<bool> UpdateStatusSoldAsync(Guid postId)
         {
             var post = await _context.Posts.FirstOrDefaultAsync(p => p.PostId == postId);

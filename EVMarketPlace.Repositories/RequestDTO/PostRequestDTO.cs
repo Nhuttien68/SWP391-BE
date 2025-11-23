@@ -16,7 +16,8 @@ namespace EVMarketPlace.Repositories.RequestDTO.Posts
         public string? Description { get; set; }
         [Required(ErrorMessage ="Price not null"), Range(1, double.MaxValue, ErrorMessage = "Price must be a non-negative value")]
         public decimal? Price { get; set; }
-
+        [Required]
+        public Guid postPackgeID { get; set; }
         public VehicleCreateDto vehicleCreateDto { get; set; }
 
         public List<IFormFile> Images { get; set; }

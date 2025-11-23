@@ -1,4 +1,6 @@
-﻿namespace EVMarketPlace.Repositories.ResponseDTO.Posts
+﻿using EVMarketPlace.Repositories.RequestDTO;
+
+namespace EVMarketPlace.Repositories.ResponseDTO.Posts
 {
     //DTO trả về client (giấu navigation, chỉ field cần).
     public class PostDto
@@ -18,7 +20,7 @@
         public VehicleDto? Vehicle { get; set; }
         public BatteryDto? Battery { get; set; }
         public string Status { get; set; } 
-        
+         public PostPackgeDTOResponse PostDetail { get; set; }
         public UserinformationResponse User { get; set; }
 
     }
