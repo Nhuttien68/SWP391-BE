@@ -17,14 +17,19 @@ namespace EVMarketPlace.Services.Implements
         private readonly UserUtility _userUtility;
         private readonly WalletRepository _walletRepository;
         private readonly ILogger<WalletService> _logger;
+        private readonly WalletTransactionRepository _walletTransactionRepository;
+
+        
 
         public WalletService(
             UserUtility userUtility,
             WalletRepository walletRepository,
+            WalletTransactionRepository walletTransactionRepository,
             ILogger<WalletService> logger)
         {
             _userUtility = userUtility;
             _walletRepository = walletRepository;
+            _walletTransactionRepository = walletTransactionRepository;
             _logger = logger;
         }
 
@@ -59,7 +64,7 @@ namespace EVMarketPlace.Services.Implements
 
                 await _walletRepository.CreateAsync(newWallet);
 
-                _logger.LogInformation("✅ CreateWallet: Success for UserId={UserId}, WalletId={WalletId}", userId, newWallet.WalletId);
+                _logger.LogInformation(" CreateWallet: Success for UserId={UserId}, WalletId={WalletId}", userId, newWallet.WalletId);
 
                 return CreateResponse(
                     StatusCodes.Status201Created,
@@ -200,6 +205,20 @@ namespace EVMarketPlace.Services.Implements
 
                 if (!success)
                     return CreateErrorResponse("Cập nhật ví thất bại. Vui lòng thử lại.");
+                // Log lịch sử giao dịch nạp tiền
+                await _walletTransactionRepository.CreateLogAsync(new WalletTransaction
+                {
+                    WalletTransactionId = Guid.NewGuid(),
+                    WalletId = wallet.WalletId,
+                    TransactionType = "TOPUP",
+                    Amount = amount,
+                    BalanceBefore = oldBalance,
+                    BalanceAfter = newBalance,
+                    ReferenceId = transactionId,
+                    PaymentMethod = paymentMethod,
+                    Description = $"Nạp tiền vào ví qua {paymentMethod}",
+                    CreatedAt = DateTime.UtcNow
+                });
 
                 _logger.LogInformation(
                     "✅ TopUp: Success. WalletId={WalletId}, Amount={Amount}, Old={OldBalance}, New={NewBalance}, TransId={TransactionId}",
@@ -261,35 +280,32 @@ namespace EVMarketPlace.Services.Implements
         {
             try
             {
-                if (userId == Guid.Empty)
-                    return CreateResponse(StatusCodes.Status400BadRequest, "UserId không hợp lệ.");
-
-                if (amount <= 0)
-                    return CreateResponse(StatusCodes.Status400BadRequest, "Số tiền trừ phải lớn hơn 0.");
-
                 var wallet = await _walletRepository.GetWalletByUserIdAsync(userId);
                 if (wallet == null)
-                {
-                    _logger.LogWarning("❌ Deduct: Wallet not found for UserId={UserId}", userId);
-                    return CreateResponse(StatusCodes.Status404NotFound, "Không tìm thấy ví người dùng.");
-                }
+                    return CreateResponse(StatusCodes.Status404NotFound, "Không tìm thấy ví.");
 
                 var currentBalance = wallet.Balance ?? 0;
                 if (currentBalance < amount)
-                {
-                    _logger.LogWarning("❌ Deduct: Insufficient balance. Current={Balance}, Required={Amount}", currentBalance, amount);
-                    return CreateResponse(StatusCodes.Status400BadRequest, $"Số dư không đủ. Hiện có {currentBalance:N0} VNĐ.");
-                }
+                    return CreateResponse(StatusCodes.Status400BadRequest, "Số dư không đủ.");
 
                 var (success, newBalance) = await _walletRepository.TryUpdateBalanceAsync(wallet.WalletId, -amount);
                 if (!success)
-                {
-                    _logger.LogWarning("⚠️ Deduct: Failed to update balance for WalletId={WalletId}", wallet.WalletId);
-                    return CreateErrorResponse("Trừ tiền thất bại. Vui lòng thử lại.");
-                }
+                    return CreateErrorResponse("Trừ tiền thất bại.");
 
-                _logger.LogInformation("✅ Deduct: Success. UserId={UserId}, Amount={Amount}, Old={OldBalance}, New={NewBalance}",
-                    userId, amount, currentBalance, newBalance);
+                // ✅ LOG LỊCH SỬ
+                await _walletTransactionRepository.CreateLogAsync(new WalletTransaction
+                {
+                    WalletTransactionId = Guid.NewGuid(),
+                    WalletId = wallet.WalletId,
+                    TransactionType = "DEDUCT",
+                    Amount = -amount,
+                    BalanceBefore = currentBalance,
+                    BalanceAfter = newBalance,
+                    ReferenceId = null,
+                    PaymentMethod = "WALLET",
+                    Description = "Thanh toán đơn hàng",
+                    CreatedAt = DateTime.UtcNow
+                });
 
                 return CreateResponse(StatusCodes.Status200OK, "Trừ tiền thành công.", new
                 {
@@ -301,7 +317,101 @@ namespace EVMarketPlace.Services.Implements
             catch (Exception ex)
             {
                 _logger.LogError(ex, "❌ Deduct: Error");
-                return CreateErrorResponse($"Lỗi trừ tiền: {ex.Message}");
+                return CreateErrorResponse($"Lỗi: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Cộng tiền vào ví seller khi bán hàng thành công
+        /// </summary>
+        public async Task<BaseResponse> AddSalesRevenueAsync(Guid sellerId, decimal amount, string transactionId, string postTitle)
+        {
+            try
+            {
+                if (amount <= 0)
+                    return CreateResponse(StatusCodes.Status400BadRequest, "Số tiền phải lớn hơn 0.");
+
+                if (string.IsNullOrWhiteSpace(transactionId))
+                    return CreateResponse(StatusCodes.Status400BadRequest, "Mã giao dịch không được để trống.");
+
+                var wallet = await _walletRepository.GetWalletByUserIdAsync(sellerId);
+                if (wallet == null)
+                    return CreateResponse(StatusCodes.Status404NotFound, "Không tìm thấy ví người bán.");
+
+                var oldBalance = wallet.Balance ?? 0;
+                var (success, newBalance) = await _walletRepository.TryUpdateBalanceAsync(wallet.WalletId, amount);
+
+                if (!success)
+                    return CreateErrorResponse("Cập nhật ví thất bại. Vui lòng thử lại.");
+
+                // ✅ LOG LỊCH SỬ - Cộng tiền từ BÁN HÀNG
+                await _walletTransactionRepository.CreateLogAsync(new WalletTransaction
+                {
+                    WalletTransactionId = Guid.NewGuid(),
+                    WalletId = wallet.WalletId,
+                    TransactionType = "SALES_REVENUE", // ← Loại mới: Doanh thu bán hàng
+                    Amount = amount,
+                    BalanceBefore = oldBalance,
+                    BalanceAfter = newBalance,
+                    ReferenceId = transactionId,
+                    PaymentMethod = "WALLET",
+                    Description = $"Bán hàng thành công: {postTitle}", // ← Mô tả rõ ràng
+                    CreatedAt = DateTime.UtcNow
+                });
+
+                _logger.LogInformation(
+                    "✅ AddSalesRevenue: Success. WalletId={WalletId}, Amount={Amount}, TransId={TransactionId}",
+                    wallet.WalletId, amount, transactionId
+                );
+
+                return CreateResponse(
+                    StatusCodes.Status200OK,
+                    "Cộng tiền bán hàng thành công.",
+                    new
+                    {
+                        WalletId = wallet.WalletId,
+                        Amount = amount,
+                        OldBalance = oldBalance,
+                        NewBalance = newBalance,
+                        TransactionId = transactionId
+                    }
+                );
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "❌ AddSalesRevenue: Error");
+                return CreateErrorResponse($"Lỗi cộng tiền bán hàng: {ex.Message}");
+            }
+        }
+
+        // method mới: Lấy lịch sử giao dịch ví
+        public async Task<BaseResponse> GetWalletTransactionHistoryAsync()
+        {
+            try
+            {
+                var userId = _userUtility.GetUserIdFromToken();
+                if (userId == Guid.Empty)
+                    return CreateResponse(StatusCodes.Status401Unauthorized, "Người dùng chưa xác thực.");
+                var history = await _walletTransactionRepository.GetByUserIdAsync(userId);
+                var response = history.Select(wt => new
+                {
+                    wt.WalletTransactionId,
+                    wt.TransactionType,
+                    wt.Amount,
+                    wt.BalanceBefore,
+                    wt.BalanceAfter,
+                    wt.ReferenceId,
+                    wt.PaymentMethod,
+                    wt.Description,
+                    wt.CreatedAt
+                }).ToList();
+                return CreateResponse(StatusCodes.Status200OK, $"Tìm thấy {response.Count} giao dịch.", response);
+
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "❌ GetWalletTransactionHistory: Error");
+                return CreateErrorResponse($"Lỗi lấy lịch sử giao dịch ví: {ex.Message}");
             }
         }
 

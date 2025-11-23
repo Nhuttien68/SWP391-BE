@@ -26,6 +26,7 @@ namespace EVMarketPlace.Repositories.Repository
         public async Task<Wallet?> GetWalletByIdAsync(Guid walletId)
         {
             return await _context.Wallets
+                .Include(w => w.User) // Incelude User để tránh null reference khi cần truy cập thông tin User.
                 .AsNoTracking()
                 .FirstOrDefaultAsync(w => w.WalletId == walletId);
         }
