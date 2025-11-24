@@ -559,6 +559,15 @@ namespace EVMarketPlace.Services.Implements
                     Phone = p.User.Phone,
                     Status = p.User.Status,
                     Role = p.User.Role
+                },
+                PostDetail = new PostPackgeDTOResponse
+                {
+                    Id = p.Package.PackageId,
+                    PackageName = p.Package.PackageName,
+                    Price = p.Package.Price,
+                    DurationInDays = p.Package.DurationInDays,
+                    CreatedAt = p.Package.CreatedAt,
+                    isActive = p.Package.IsActive
                 }
             }).ToList();
             return new BaseResponse
@@ -601,6 +610,15 @@ namespace EVMarketPlace.Services.Implements
                     Phone = post.User.Phone,
                     Status = post.User.Status,
                     Role = post.User.Role
+                },
+                PostDetail = new PostPackgeDTOResponse
+                {
+                    Id = post.Package.PackageId,
+                    PackageName = post.Package.PackageName,
+                    Price = post.Package.Price,
+                    DurationInDays = post.Package.DurationInDays,
+                    CreatedAt = post.Package.CreatedAt,
+                    isActive = post.Package.IsActive
                 }
 
             };
@@ -684,6 +702,15 @@ namespace EVMarketPlace.Services.Implements
                         Phone = p.User.Phone,
                         Status = p.User.Status,
                         Role = p.User.Role
+                    },
+                    PostDetail = new PostPackgeDTOResponse
+                    {
+                        Id = p.Package.PackageId,
+                        PackageName = p.Package.PackageName,
+                        Price = p.Package.Price,
+                        DurationInDays = p.Package.DurationInDays,
+                        CreatedAt = p.Package.CreatedAt,
+                        isActive = p.Package.IsActive
                     }
                 }).ToList();
 
