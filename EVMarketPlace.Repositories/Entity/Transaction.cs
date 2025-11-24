@@ -5,6 +5,8 @@ namespace EVMarketPlace.Repositories.Entity;
 
 public partial class Transaction
 {
+    public decimal? Comissionrate { get; set; }
+
     public Guid TransactionId { get; set; }
 
     public Guid? BuyerId { get; set; }
@@ -30,6 +32,12 @@ public partial class Transaction
     public string? ReceiverAddress { get; set; }
 
     public string? Note { get; set; }
+
+    public decimal? CommissionRate { get; set; }
+
+    public decimal? CommissionAmount { get; set; }
+
+    public decimal? SellerReceived { get; set; }
 
     public virtual User? Buyer { get; set; }
 

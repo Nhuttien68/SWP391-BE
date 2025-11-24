@@ -16,7 +16,11 @@ namespace EVMarketPlace.Repositories.RequestDTO
         public Guid PostId { get; set; }
         [Required(ErrorMessage = "PostStartPriced Is Not Alloew null")]
         public decimal StartPrice { get; set; }
+        [Required(ErrorMessage = "BidStep Is Not Alloew null")]
+        public decimal BidStep { get; set; }
         [Required(ErrorMessage = "EndTime Is Not Alloew null")]
+   
+
         public DateTime EndTime { get; set; } // UTC expected
     }
     public class UpdateTransactionRequest

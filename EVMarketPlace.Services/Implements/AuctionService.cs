@@ -17,11 +17,13 @@ namespace EVMarketPlace.Services.Implements
         private readonly IWalletService _walletService;
         private readonly ILogger<AuctionService> _logger;
         private readonly UserUtility _userUtility;
+        private readonly WalletRepository _walletRepository;
 
         public AuctionService(
             AuctionRepository auctionRepository,
             TransactionRepository transactionRepository,
             IWalletService walletService,
+            WalletRepository walletRepository,
             ILogger<AuctionService> logger, UserUtility userUtility)
         {
             _auctionRepository = auctionRepository;
@@ -29,6 +31,7 @@ namespace EVMarketPlace.Services.Implements
             _walletService = walletService;
             _logger = logger;
             _userUtility = userUtility;
+            _walletRepository = walletRepository;
         }
 
         public async Task<BaseResponse> CreateAuctionAsync(CreateAuctionRequest req)
@@ -60,6 +63,7 @@ namespace EVMarketPlace.Services.Implements
                     AuctionId = Guid.NewGuid(),
                     PostId = req.PostId,
                     StartPrice = req.StartPrice,
+                    BidStep = req.BidStep,
                     CurrentPrice = req.StartPrice,
                     EndTime = req.EndTime,
                     Status = "Active"
@@ -77,6 +81,7 @@ namespace EVMarketPlace.Services.Implements
                         auction.PostId,
                         auction.StartPrice,
                         auction.CurrentPrice,
+                        auction.BidStep,
                         auction.EndTime,
                         auction.Status
                     }
@@ -94,11 +99,12 @@ namespace EVMarketPlace.Services.Implements
             }
         }
 
-        public async Task<BaseResponse> PlaceBidAsync( PlaceBidRequest req)
+        public async Task<BaseResponse> PlaceBidAsync(PlaceBidRequest req)
         {
             var auction = await _auctionRepository.GetAuctionWithBidsAsync(req.AuctionId);
             if (auction == null)
                 return new BaseResponse { Status = "404", Message = "Auction not found" };
+
             var userId = _userUtility.GetUserIdFromToken();
 
             if (auction.Status != "Active")
@@ -107,13 +113,29 @@ namespace EVMarketPlace.Services.Implements
             if (DateTime.Now >= auction.EndTime)
                 return new BaseResponse { Status = "400", Message = "Auction has ended" };
 
-            // Kiểm tra không được đặt giá vào bài đăng của chính mình
+            // Không được đấu giá bài của mình
             if (auction.Post != null && auction.Post.UserId == userId)
                 return new BaseResponse { Status = "400", Message = "You cannot bid on your own auction" };
 
             if (req.BidAmount <= auction.CurrentPrice)
                 return new BaseResponse { Status = "400", Message = "Bid must be higher than current price" };
 
+            // ⭐ LẤY VÍ NGƯỜI ĐẤU GIÁ
+            var userWallet = await _walletRepository.GetWalletByUserIdAsync(userId);
+            if (userWallet == null)
+                return new BaseResponse { Status = "500", Message = "Wallet not found" };
+
+            // ⭐ CHECK SỐ DƯ
+            if (userWallet.Balance < req.BidAmount)
+            {
+                return new BaseResponse
+                {
+                    Status = "400",
+                    Message = "Your wallet balance is not enough to place this bid"
+                };
+            }
+
+            // Tạo bid
             var bid = new AuctionBid
             {
                 BidId = Guid.NewGuid(),
@@ -135,6 +157,8 @@ namespace EVMarketPlace.Services.Implements
                 Data = bid
             };
         }
+
+
 
         public async Task<List<AuctionCloseResultDTO>> CloseExpiredAuctionsAsync()
         {

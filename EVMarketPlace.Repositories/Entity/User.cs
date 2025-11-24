@@ -35,6 +35,8 @@ public partial class User
 
     public virtual ShoppingCart? ShoppingCart { get; set; }
 
+    public virtual ICollection<SystemSetting> SystemSettings { get; set; } = new List<SystemSetting>();
+
     public virtual ICollection<Transaction> TransactionBuyers { get; set; } = new List<Transaction>();
 
     public virtual ICollection<Transaction> TransactionSellers { get; set; } = new List<Transaction>();
