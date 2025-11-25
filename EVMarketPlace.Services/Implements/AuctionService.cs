@@ -18,12 +18,14 @@ namespace EVMarketPlace.Services.Implements
         private readonly ILogger<AuctionService> _logger;
         private readonly UserUtility _userUtility;
         private readonly WalletRepository _walletRepository;
+        private readonly WalletTransactionRepository _walletTransactionRepository;
 
         public AuctionService(
             AuctionRepository auctionRepository,
             TransactionRepository transactionRepository,
             IWalletService walletService,
             WalletRepository walletRepository,
+            WalletTransactionRepository walletTransactionRepository,
             ILogger<AuctionService> logger, UserUtility userUtility)
         {
             _auctionRepository = auctionRepository;
@@ -32,6 +34,8 @@ namespace EVMarketPlace.Services.Implements
             _logger = logger;
             _userUtility = userUtility;
             _walletRepository = walletRepository;
+            _walletTransactionRepository = walletTransactionRepository;
+
         }
 
         public async Task<BaseResponse> CreateAuctionAsync(CreateAuctionRequest req)
@@ -167,33 +171,28 @@ namespace EVMarketPlace.Services.Implements
 
             foreach (var auction in expired)
             {
-                // ✅ Kiểm tra xem auction đã được xử lý chưa (tránh duplicate processing)
-                if (auction.Status != "Active")
-                {
-                    _logger.LogInformation("⏭️ Auction {AuctionId} already processed (Status: {Status}). Skipping.", 
-                        auction.AuctionId, auction.Status);
-                    continue;
-                }
+                // ⛔ Nếu đã xử lý rồi thì bỏ qua
+                if (auction.Status != "Active") continue;
 
-                // ✅ Đánh dấu "Processing" ngay lập tức để tránh race condition
+                // 🟡 Đánh dấu đang xử lý
                 auction.Status = "Processing";
                 await _auctionRepository.UpdateAsync(auction);
 
+                // 🏅 Lấy người đặt giá cao nhất
                 var highestBid = auction.AuctionBids
                     .OrderByDescending(b => b.BidAmount)
                     .FirstOrDefault();
 
-                if (highestBid == null || highestBid.UserId == null || highestBid.BidAmount == null)
+                if (highestBid == null || highestBid.UserId == null)
                 {
-                    _logger.LogWarning("⚠️ Auction {AuctionId} has no valid bids.", auction.AuctionId);
-                    auction.Status = "Ended"; // Kết thúc mà không có người thắng
+                    auction.Status = "Ended";
                     await _auctionRepository.UpdateAsync(auction);
                     continue;
                 }
 
+                // ❗ Lấy post
                 if (auction.Post == null)
                 {
-                    _logger.LogWarning("⚠️ Auction {AuctionId} missing post data.", auction.AuctionId);
                     auction.Status = "Failed";
                     await _auctionRepository.UpdateAsync(auction);
                     continue;
@@ -203,34 +202,77 @@ namespace EVMarketPlace.Services.Implements
 
 
                 // ✅ Trừ tiền người thắng (buyer)
-                var deduct = await _walletService.DeductAsync(highestBid.UserId.Value, highestBid.BidAmount.Value, auctionCloseTransactionId);
+                var deduct = await _walletService.DeductAsync(highestBid.UserId.Value, highestBid.BidAmount.Value);
                 if (deduct.Status != "200")
                 {
-                    _logger.LogWarning("⚠️ Không thể trừ tiền người thắng {UserId}: {Message}", highestBid.UserId, deduct.Message);
-                    auction.Status = "Failed"; // Đánh dấu đấu giá thất bại
-                    await _auctionRepository.UpdateAsync(auction);
-                    continue;
-                }
-
-                // ✅ Cộng tiền cho người bán (seller) - 100% (đã thu 100k phí đăng bài)
-                string auctionTransId = $"AUCTION_{auction.AuctionId}_{DateTime.UtcNow.Ticks}";
-                var addToSeller = await _walletService.TopUpWalletAsync(highestBid.BidAmount.Value, auctionTransId, "AuctionPayout", auction.Post.UserId);
-                if (addToSeller.Status != "200")
-                {
-                    _logger.LogWarning("⚠️ Không thể cộng tiền cho seller {SellerId}: {Message}", auction.Post.UserId, addToSeller.Message);
-                    // Hoàn tiền lại cho buyer
-                    string refundTransId = $"REFUND_{auction.AuctionId}_{DateTime.UtcNow.Ticks}";
-                    await _walletService.TopUpWalletAsync(highestBid.BidAmount.Value, refundTransId, "AuctionRefund", highestBid.UserId.Value);
                     auction.Status = "Failed";
                     await _auctionRepository.UpdateAsync(auction);
                     continue;
                 }
 
-                // ✅ Cập nhật WinnerId
-                auction.WinnerId = highestBid.UserId.Value;
-                auction.Status = "Ended"; // ✅ Đánh dấu hoàn thành
+                // 🟢 Tạo WalletTransaction cho người thắng
+                var buyerWalletTran = new WalletTransaction
+                {
+                    WalletTransactionId = Guid.NewGuid(),
+                    WalletId = winnerWallet.WalletId,
+                    Amount = -highestBid.BidAmount.Value,
+                    TransactionType = "AuctionPayment",
+                    Description = $"Payment for auction {auction.AuctionId}",
+                    CreatedAt = DateTime.UtcNow
+                };
+                await _walletTransactionRepository.CreateAsync(buyerWalletTran);
 
-                // ✅ Tạo transaction
+                // 🔹 Lấy ví người bán
+                var sellerWallet = await _walletRepository.GetWalletByUserIdAsync(auction.Post.UserId);
+                if (sellerWallet == null)
+                {
+                    // Hoàn lại tiền cho người thắng nếu seller không có ví
+                    string refundTransId = $"REFUND_{auction.AuctionId}_{DateTime.UtcNow.Ticks}";
+                    await _walletService.TopUpWalletAsync(highestBid.BidAmount.Value, refundTransId, "AuctionRefund", highestBid.UserId.Value);
+
+                    auction.Status = "Failed";
+                    await _auctionRepository.UpdateAsync(auction);
+                    continue;
+                }
+
+                // 🟢 Cộng tiền cho seller
+                string auctionTransId = $"AUCTION_{auction.AuctionId}_{DateTime.UtcNow.Ticks}";
+                var addToSeller = await _walletService.TopUpWalletAsync(
+                    highestBid.BidAmount.Value,
+                    auctionTransId,
+                    "AuctionPayout",
+                    auction.Post.UserId
+                );
+
+                if (addToSeller.Status != "200")
+                {
+                    // ❗ Hoàn lại tiền cho người thắng nếu seller nhận tiền thất bại
+                    string refundTransId = $"REFUND_{auction.AuctionId}_{DateTime.UtcNow.Ticks}";
+                    await _walletService.TopUpWalletAsync(highestBid.BidAmount.Value, refundTransId, "AuctionRefund", highestBid.UserId.Value);
+
+                    auction.Status = "Failed";
+                    await _auctionRepository.UpdateAsync(auction);
+                    continue;
+                }
+
+                // 🟢 Tạo WalletTransaction cho seller
+                var sellerWalletTran = new WalletTransaction
+                {
+                    WalletTransactionId = Guid.NewGuid(),
+                    WalletId = sellerWallet.WalletId,
+                    Amount = highestBid.BidAmount.Value,
+                    TransactionType = "AuctionPayout",
+                    Description = $"Seller payout for auction {auction.AuctionId}",
+                    CreatedAt = DateTime.UtcNow
+                };
+                await _walletTransactionRepository.CreateAsync(sellerWalletTran);
+
+                // 🏆 Gán người thắng
+                auction.WinnerId = highestBid.UserId.Value;
+                auction.Status = "Ended";
+                await _auctionRepository.UpdateAsync(auction);
+
+                // 🧾 Tạo transaction chính
                 var trans = new Transaction
                 {
                     TransactionId = Guid.NewGuid(),
@@ -243,17 +285,21 @@ namespace EVMarketPlace.Services.Implements
                     CreatedAt = DateTime.UtcNow
                 };
                 await _transactionRepository.CreateAsync(trans);
-                
-                // ✅ Update auction với status "Ended"
-                await _auctionRepository.UpdateAsync(auction);
-                
-                _logger.LogInformation("✅ Auction {AuctionId} closed. Winner: {WinnerId}, Amount: {Amount}", 
-                    auction.AuctionId, highestBid.UserId, highestBid.BidAmount);
 
+                // Thêm kết quả vào danh sách trả về
+                results.Add(new AuctionCloseResultDTO
+                {
+                    AuctionId = auction.AuctionId,
+                    WinnerId = auction.WinnerId,
+                    FinalAmount = highestBid.BidAmount.Value,
+                    Status = auction.Status
+                });
             }
 
             return results;
         }
+
+
 
         public async Task<List<Auction>> GetActiveAuctionsAsync()
         {

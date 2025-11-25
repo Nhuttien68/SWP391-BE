@@ -43,6 +43,7 @@ namespace EVMarketPlace.Repositories.RequestDTO
     {
         public Guid AuctionId { get; set; }
         public decimal FinalPrice { get; set; }
+        public decimal FinalAmount { get; set; }
         public Guid? WinnerId { get; set; }
         public string Status { get; set; } = null!;
 
