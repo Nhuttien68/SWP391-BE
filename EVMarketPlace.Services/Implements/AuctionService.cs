@@ -1,4 +1,5 @@
-﻿using EVMarketPlace.Repositories.Entity;
+﻿
+using EVMarketPlace.Repositories.Entity;
 using EVMarketPlace.Repositories.Enum;
 using EVMarketPlace.Repositories.Repository;
 using EVMarketPlace.Repositories.RequestDTO;
@@ -197,12 +198,21 @@ namespace EVMarketPlace.Services.Implements
                     await _auctionRepository.UpdateAsync(auction);
                     continue;
                 }
-                // Tạo transaction ID cho việc đóng đấu giá
+
+                // 🔹 Lấy ví người thắng
+                var winnerWallet = await _walletRepository.GetWalletByUserIdAsync(highestBid.UserId.Value);
+                if (winnerWallet == null)
+                {
+                    auction.Status = "Failed";
+                    await _auctionRepository.UpdateAsync(auction);
+                    continue;
+                }
+
                 string auctionCloseTransactionId = $"AUCTION_CLOSE_{auction.AuctionId}";
 
 
-                // ✅ Trừ tiền người thắng (buyer)
-                var deduct = await _walletService.DeductAsync(highestBid.UserId.Value, highestBid.BidAmount.Value);
+                // ❌ Trừ tiền người thắng
+                var deduct = await _walletService.DeductAsync(highestBid.UserId.Value, highestBid.BidAmount.Value, auctionCloseTransactionId);
                 if (deduct.Status != "200")
                 {
                     auction.Status = "Failed";
