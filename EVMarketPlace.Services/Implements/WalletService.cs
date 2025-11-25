@@ -93,16 +93,16 @@ namespace EVMarketPlace.Services.Implements
                 var wallet = await _walletRepository.GetWalletByUserIdAsync(userId);
                 if (wallet == null)
                 {
-                    _logger.LogWarning("❌ GetWallet: Wallet not found for UserId={UserId}", userId);
+                    _logger.LogWarning(" GetWallet: Wallet not found for UserId={UserId}", userId);
                     return CreateResponse(StatusCodes.Status404NotFound, "Không tìm thấy ví. Vui lòng tạo ví trước.");
                 }
 
-                _logger.LogInformation("✅ GetWallet: Retrieved for UserId={UserId}", userId);
+                _logger.LogInformation(" GetWallet: Retrieved for UserId={UserId}", userId);
                 return CreateResponse(StatusCodes.Status200OK, "Lấy thông tin ví thành công.", MapToDto(wallet));
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "❌ GetWallet: Error");
+                _logger.LogError(ex, " GetWallet: Error");
                 return CreateErrorResponse($"Lỗi lấy thông tin ví: {ex.Message}");
             }
         }
@@ -276,7 +276,7 @@ namespace EVMarketPlace.Services.Implements
                 Message = message
             };
         }
-        public async Task<BaseResponse> DeductAsync(Guid userId, decimal amount)
+        public async Task<BaseResponse> DeductAsync(Guid userId, decimal amount, string transactionId) // trừ tiền khi thanh toán
         {
             try
             {
@@ -301,9 +301,9 @@ namespace EVMarketPlace.Services.Implements
                     Amount = -amount,
                     BalanceBefore = currentBalance,
                     BalanceAfter = newBalance,
-                    ReferenceId = null,
+                    ReferenceId = transactionId,
                     PaymentMethod = "WALLET",
-                    Description = "Thanh toán đơn hàng",
+                    Description = $"Thanh toán cho giao dịch {transactionId}",
                     CreatedAt = DateTime.UtcNow
                 });
 
@@ -344,7 +344,9 @@ namespace EVMarketPlace.Services.Implements
                 if (!success)
                     return CreateErrorResponse("Cập nhật ví thất bại. Vui lòng thử lại.");
 
-                // ✅ LOG LỊCH SỬ - Cộng tiền từ BÁN HÀNG
+                var description = $"Nhận tiền từ bán hàng: '{(!string.IsNullOrEmpty(postTitle) ? postTitle : "Sản phẩm không có tiêu đề")}'";
+
+                //  LOG LỊCH SỬ - Cộng tiền từ BÁN HÀNG
                 await _walletTransactionRepository.CreateLogAsync(new WalletTransaction
                 {
                     WalletTransactionId = Guid.NewGuid(),
@@ -355,12 +357,12 @@ namespace EVMarketPlace.Services.Implements
                     BalanceAfter = newBalance,
                     ReferenceId = transactionId,
                     PaymentMethod = "WALLET",
-                    Description = $"Bán hàng thành công: {postTitle}", // ← Mô tả rõ ràng
+                    Description = description,
                     CreatedAt = DateTime.UtcNow
                 });
 
                 _logger.LogInformation(
-                    "✅ AddSalesRevenue: Success. WalletId={WalletId}, Amount={Amount}, TransId={TransactionId}",
+                    " AddSalesRevenue: Success. WalletId={WalletId}, Amount={Amount}, TransId={TransactionId}",
                     wallet.WalletId, amount, transactionId
                 );
 

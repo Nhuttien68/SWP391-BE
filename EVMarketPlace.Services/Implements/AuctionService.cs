@@ -198,9 +198,12 @@ namespace EVMarketPlace.Services.Implements
                     await _auctionRepository.UpdateAsync(auction);
                     continue;
                 }
+                // Tạo transaction ID cho việc đóng đấu giá
+                string auctionCloseTransactionId = $"AUCTION_CLOSE_{auction.AuctionId}";
+
 
                 // ✅ Trừ tiền người thắng (buyer)
-                var deduct = await _walletService.DeductAsync(highestBid.UserId.Value, highestBid.BidAmount.Value);
+                var deduct = await _walletService.DeductAsync(highestBid.UserId.Value, highestBid.BidAmount.Value, auctionCloseTransactionId);
                 if (deduct.Status != "200")
                 {
                     _logger.LogWarning("⚠️ Không thể trừ tiền người thắng {UserId}: {Message}", highestBid.UserId, deduct.Message);

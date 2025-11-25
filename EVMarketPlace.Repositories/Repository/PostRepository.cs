@@ -37,6 +37,15 @@ namespace EVMarketPlace.Repositories.Repository
             return true;
         }
 
+        public async Task<bool> UpdateStatusApprovedAsync(Guid postId)
+        {
+            var rowsAffected = await _context.Posts
+                .Where(p => p.PostId == postId)
+                .ExecuteUpdateAsync(p => p.SetProperty(x => x.Status, PostStatusEnum.APPROVED.ToString()));
+
+            return rowsAffected > 0;
+        }
+
         public async Task<IEnumerable<Post>> GetAllPostWithImageAsync()
         {
             return await _context.Posts

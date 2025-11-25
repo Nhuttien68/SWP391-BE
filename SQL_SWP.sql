@@ -49,6 +49,21 @@ CREATE TABLE WalletTransactions (
 );
 
 -- =============================================
+-- SYSTEM SETTINGS
+-- =============================================
+CREATE TABLE SystemSettings (
+    SettingId UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(), 
+    SettingKey NVARCHAR(100) UNIQUE NOT NULL,
+    SettingValue NVARCHAR(500) NOT NULL,
+    Description NVARCHAR(500) NULL,
+    Category NVARCHAR(50) NULL,
+    CreatedAt DATETIME DEFAULT GETDATE(),
+    UpdatedAt DATETIME NULL,
+    UpdatedBy UNIQUEIDENTIFIER NULL,
+    FOREIGN KEY (UpdatedBy) REFERENCES Users(UserId)
+);
+    
+-- =============================================
 -- WITHDRAWAL REQUESTS
 -- =============================================
 CREATE TABLE WithdrawalRequests (
@@ -194,6 +209,7 @@ CREATE TABLE CartItems (
 -- TRANSACTIONS
 -- =============================================
 CREATE TABLE Transactions (
+    COMISSIONRATE DECIMAL(5,2) DEFAULT 2.5, -- hoa hồng sàn giao dịch
     TransactionId UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),
     BuyerId UNIQUEIDENTIFIER,
     SellerId UNIQUEIDENTIFIER,
@@ -207,6 +223,9 @@ CREATE TABLE Transactions (
     ReceiverPhone NVARCHAR(20),
     ReceiverAddress NVARCHAR(255),
     Note NVARCHAR(255),
+    CommissionRate DECIMAL(5,2) NULL,
+    CommissionAmount DECIMAL(18,2) NULL,
+    SellerReceived DECIMAL(18,2) NULL,
     FOREIGN KEY (BuyerId) REFERENCES Users(UserId),
     FOREIGN KEY (SellerId) REFERENCES Users(UserId),
     FOREIGN KEY (PostId) REFERENCES Posts(PostId),
