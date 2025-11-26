@@ -54,9 +54,9 @@ public partial class EvMarketplaceContext : DbContext
 
     public virtual DbSet<WithdrawalRequest> WithdrawalRequests { get; set; }
 
-    //    protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
-    //#warning To protect potentially sensitive information in your connection string, you should move it out of source code. You can avoid scaffolding the connection string by using the Name= syntax to read it from configuration - see https://go.microsoft.com/fwlink/?linkid=2131148. For more guidance on storing connection strings, see https://go.microsoft.com/fwlink/?LinkId=723263.
-    //        => optionsBuilder.UseSqlServer("Server=DESKTOP-DNV1FA0\\TIEN;Database=EV_Marketplace;User Id=sa;Password=12345;TrustServerCertificate=True;");
+//    protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+//#warning To protect potentially sensitive information in your connection string, you should move it out of source code. You can avoid scaffolding the connection string by using the Name= syntax to read it from configuration - see https://go.microsoft.com/fwlink/?linkid=2131148. For more guidance on storing connection strings, see https://go.microsoft.com/fwlink/?LinkId=723263.
+//        => optionsBuilder.UseSqlServer("Server=DESKTOP-DNV1FA0\\TIEN;Database=EV_Marketplace;User Id=sa;Password=12345;TrustServerCertificate=True;");
     public static string GetConnectionString(string connectionStringName)
     {
         var config = new ConfigurationBuilder()
@@ -74,15 +74,13 @@ public partial class EvMarketplaceContext : DbContext
         return connectionString;
     }
 
-    protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
-        => optionsBuilder.UseSqlServer(GetConnectionString("DefaultConnection"));
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<Auction>(entity =>
         {
-            entity.HasKey(e => e.AuctionId).HasName("PK__Auctions__51004A4CEED0D67C");
+            entity.HasKey(e => e.AuctionId).HasName("PK__Auctions__51004A4CD5CC3890");
 
-            entity.HasIndex(e => e.PostId, "UQ__Auctions__AA1260191D7873D8").IsUnique();
+            entity.HasIndex(e => e.PostId, "UQ__Auctions__AA126019E80657AE").IsUnique();
 
             entity.Property(e => e.AuctionId).HasDefaultValueSql("(newid())");
             entity.Property(e => e.BidStep).HasColumnType("decimal(18, 2)");
@@ -93,16 +91,16 @@ public partial class EvMarketplaceContext : DbContext
 
             entity.HasOne(d => d.Post).WithOne(p => p.Auction)
                 .HasForeignKey<Auction>(d => d.PostId)
-                .HasConstraintName("FK__Auctions__PostId__1332DBDC");
+                .HasConstraintName("FK__Auctions__PostId__123EB7A3");
 
             entity.HasOne(d => d.Winner).WithMany(p => p.Auctions)
                 .HasForeignKey(d => d.WinnerId)
-                .HasConstraintName("FK__Auctions__Winner__14270015");
+                .HasConstraintName("FK__Auctions__Winner__1332DBDC");
         });
 
         modelBuilder.Entity<AuctionBid>(entity =>
         {
-            entity.HasKey(e => e.BidId).HasName("PK__AuctionB__4A733D9239807F84");
+            entity.HasKey(e => e.BidId).HasName("PK__AuctionB__4A733D92646D4423");
 
             entity.Property(e => e.BidId).HasDefaultValueSql("(newid())");
             entity.Property(e => e.BidAmount).HasColumnType("decimal(18, 2)");
@@ -112,18 +110,18 @@ public partial class EvMarketplaceContext : DbContext
 
             entity.HasOne(d => d.Auction).WithMany(p => p.AuctionBids)
                 .HasForeignKey(d => d.AuctionId)
-                .HasConstraintName("FK__AuctionBi__Aucti__18EBB532");
+                .HasConstraintName("FK__AuctionBi__Aucti__17F790F9");
 
             entity.HasOne(d => d.User).WithMany(p => p.AuctionBids)
                 .HasForeignKey(d => d.UserId)
-                .HasConstraintName("FK__AuctionBi__UserI__19DFD96B");
+                .HasConstraintName("FK__AuctionBi__UserI__18EBB532");
         });
 
         modelBuilder.Entity<Battery>(entity =>
         {
-            entity.HasKey(e => e.BatteryId).HasName("PK__Batterie__5710805E740B3BFE");
+            entity.HasKey(e => e.BatteryId).HasName("PK__Batterie__5710805E394CE9A7");
 
-            entity.HasIndex(e => e.PostId, "UQ__Batterie__AA126019C433EB2F").IsUnique();
+            entity.HasIndex(e => e.PostId, "UQ__Batterie__AA1260198A74CCA3").IsUnique();
 
             entity.Property(e => e.BatteryId).HasDefaultValueSql("(newid())");
             entity.Property(e => e.Condition).HasMaxLength(50);
@@ -139,7 +137,7 @@ public partial class EvMarketplaceContext : DbContext
 
         modelBuilder.Entity<BatteryBrand>(entity =>
         {
-            entity.HasKey(e => e.BrandId).HasName("PK__BatteryB__DAD4F05E372F932F");
+            entity.HasKey(e => e.BrandId).HasName("PK__BatteryB__DAD4F05E86FD8F4D");
 
             entity.Property(e => e.BrandId).HasDefaultValueSql("(newid())");
             entity.Property(e => e.Name).HasMaxLength(100);
@@ -148,7 +146,7 @@ public partial class EvMarketplaceContext : DbContext
 
         modelBuilder.Entity<CartItem>(entity =>
         {
-            entity.HasKey(e => e.CartItemId).HasName("PK__CartItem__488B0B0A2A59849A");
+            entity.HasKey(e => e.CartItemId).HasName("PK__CartItem__488B0B0AAF48007D");
 
             entity.Property(e => e.CartItemId).HasDefaultValueSql("(newid())");
             entity.Property(e => e.AddedAt)
@@ -167,7 +165,7 @@ public partial class EvMarketplaceContext : DbContext
 
         modelBuilder.Entity<Favorite>(entity =>
         {
-            entity.HasKey(e => e.FavoriteId).HasName("PK__Favorite__CE74FAD5BD0BFB80");
+            entity.HasKey(e => e.FavoriteId).HasName("PK__Favorite__CE74FAD553EFFDB6");
 
             entity.Property(e => e.FavoriteId).HasDefaultValueSql("(newid())");
             entity.Property(e => e.CreatedAt)
@@ -185,7 +183,7 @@ public partial class EvMarketplaceContext : DbContext
 
         modelBuilder.Entity<Post>(entity =>
         {
-            entity.HasKey(e => e.PostId).HasName("PK__Posts__AA12601801A54FA6");
+            entity.HasKey(e => e.PostId).HasName("PK__Posts__AA126018CA0AC44B");
 
             entity.Property(e => e.PostId).HasDefaultValueSql("(newid())");
             entity.Property(e => e.CreatedAt)
@@ -211,7 +209,7 @@ public partial class EvMarketplaceContext : DbContext
 
         modelBuilder.Entity<PostImage>(entity =>
         {
-            entity.HasKey(e => e.ImageId).HasName("PK__PostImag__7516F70CFBB3425B");
+            entity.HasKey(e => e.ImageId).HasName("PK__PostImag__7516F70C5B5EEACB");
 
             entity.Property(e => e.ImageId).HasDefaultValueSql("(newid())");
             entity.Property(e => e.ImageUrl).HasMaxLength(500);
@@ -226,7 +224,7 @@ public partial class EvMarketplaceContext : DbContext
 
         modelBuilder.Entity<PostPackage>(entity =>
         {
-            entity.HasKey(e => e.PackageId).HasName("PK__PostPack__322035CCC606D8EA");
+            entity.HasKey(e => e.PackageId).HasName("PK__PostPack__322035CCB0814179");
 
             entity.Property(e => e.PackageId).HasDefaultValueSql("(newid())");
             entity.Property(e => e.CreatedAt)
@@ -239,7 +237,7 @@ public partial class EvMarketplaceContext : DbContext
 
         modelBuilder.Entity<Review>(entity =>
         {
-            entity.HasKey(e => e.ReviewId).HasName("PK__Reviews__74BC79CE4898845E");
+            entity.HasKey(e => e.ReviewId).HasName("PK__Reviews__74BC79CE64212738");
 
             entity.Property(e => e.ReviewId).HasDefaultValueSql("(newid())");
             entity.Property(e => e.CreatedAt)
@@ -249,26 +247,26 @@ public partial class EvMarketplaceContext : DbContext
 
             entity.HasOne(d => d.Post).WithMany(p => p.Reviews)
                 .HasForeignKey(d => d.PostId)
-                .HasConstraintName("FK__Reviews__PostId__22751F6C");
+                .HasConstraintName("FK__Reviews__PostId__2180FB33");
 
             entity.HasOne(d => d.ReviewedUser).WithMany(p => p.ReviewReviewedUsers)
                 .HasForeignKey(d => d.ReviewedUserId)
-                .HasConstraintName("FK__Reviews__Reviewe__2180FB33");
+                .HasConstraintName("FK__Reviews__Reviewe__208CD6FA");
 
             entity.HasOne(d => d.Reviewer).WithMany(p => p.ReviewReviewers)
                 .HasForeignKey(d => d.ReviewerId)
-                .HasConstraintName("FK__Reviews__Reviewe__208CD6FA");
+                .HasConstraintName("FK__Reviews__Reviewe__1F98B2C1");
 
             entity.HasOne(d => d.Transaction).WithMany(p => p.Reviews)
                 .HasForeignKey(d => d.TransactionId)
-                .HasConstraintName("FK__Reviews__Transac__1F98B2C1");
+                .HasConstraintName("FK__Reviews__Transac__1EA48E88");
         });
 
         modelBuilder.Entity<ShoppingCart>(entity =>
         {
-            entity.HasKey(e => e.CartId).HasName("PK__Shopping__51BCD7B7B493BC5C");
+            entity.HasKey(e => e.CartId).HasName("PK__Shopping__51BCD7B799030F7F");
 
-            entity.HasIndex(e => e.UserId, "UQ__Shopping__1788CC4D9BABB235").IsUnique();
+            entity.HasIndex(e => e.UserId, "UQ__Shopping__1788CC4D8FEFEC89").IsUnique();
 
             entity.Property(e => e.CartId).HasDefaultValueSql("(newid())");
             entity.Property(e => e.CreatedAt)
@@ -283,9 +281,9 @@ public partial class EvMarketplaceContext : DbContext
 
         modelBuilder.Entity<SystemSetting>(entity =>
         {
-            entity.HasKey(e => e.SettingId).HasName("PK__SystemSe__54372B1D7DC5CF51");
+            entity.HasKey(e => e.SettingId).HasName("PK__SystemSe__54372B1D807E33FB");
 
-            entity.HasIndex(e => e.SettingKey, "UQ__SystemSe__01E719ADE1F55786").IsUnique();
+            entity.HasIndex(e => e.SettingKey, "UQ__SystemSe__01E719ADDA599E9C").IsUnique();
 
             entity.Property(e => e.SettingId).HasDefaultValueSql("(newid())");
             entity.Property(e => e.Category).HasMaxLength(50);
@@ -304,14 +302,10 @@ public partial class EvMarketplaceContext : DbContext
 
         modelBuilder.Entity<Transaction>(entity =>
         {
-            entity.HasKey(e => e.TransactionId).HasName("PK__Transact__55433A6BB7DB0685");
+            entity.HasKey(e => e.TransactionId).HasName("PK__Transact__55433A6B496ED5D8");
 
             entity.Property(e => e.TransactionId).HasDefaultValueSql("(newid())");
             entity.Property(e => e.Amount).HasColumnType("decimal(18, 2)");
-            entity.Property(e => e.Comissionrate)
-                .HasDefaultValue(2.5m)
-                .HasColumnType("decimal(5, 2)")
-                .HasColumnName("COMISSIONRATE");
             entity.Property(e => e.CommissionAmount).HasColumnType("decimal(18, 2)");
             entity.Property(e => e.CommissionRate).HasColumnType("decimal(5, 2)");
             entity.Property(e => e.CreatedAt)
@@ -327,28 +321,28 @@ public partial class EvMarketplaceContext : DbContext
 
             entity.HasOne(d => d.Buyer).WithMany(p => p.TransactionBuyers)
                 .HasForeignKey(d => d.BuyerId)
-                .HasConstraintName("FK__Transacti__Buyer__0B91BA14");
+                .HasConstraintName("FK__Transacti__Buyer__0A9D95DB");
 
             entity.HasOne(d => d.Cart).WithMany(p => p.Transactions)
                 .HasForeignKey(d => d.CartId)
-                .HasConstraintName("FK__Transacti__CartI__0E6E26BF");
+                .HasConstraintName("FK__Transacti__CartI__0D7A0286");
 
             entity.HasOne(d => d.Post).WithMany(p => p.Transactions)
                 .HasForeignKey(d => d.PostId)
-                .HasConstraintName("FK__Transacti__PostI__0D7A0286");
+                .HasConstraintName("FK__Transacti__PostI__0C85DE4D");
 
             entity.HasOne(d => d.Seller).WithMany(p => p.TransactionSellers)
                 .HasForeignKey(d => d.SellerId)
-                .HasConstraintName("FK__Transacti__Selle__0C85DE4D");
+                .HasConstraintName("FK__Transacti__Selle__0B91BA14");
         });
 
         modelBuilder.Entity<User>(entity =>
         {
-            entity.HasKey(e => e.UserId).HasName("PK__Users__1788CC4C6048A0DE");
+            entity.HasKey(e => e.UserId).HasName("PK__Users__1788CC4C76EB9331");
 
-            entity.HasIndex(e => e.Phone, "UQ__Users__5C7E359ED59DE304").IsUnique();
+            entity.HasIndex(e => e.Phone, "UQ__Users__5C7E359EF2034901").IsUnique();
 
-            entity.HasIndex(e => e.Email, "UQ__Users__A9D10534A7F41C94").IsUnique();
+            entity.HasIndex(e => e.Email, "UQ__Users__A9D10534D261080E").IsUnique();
 
             entity.Property(e => e.UserId).HasDefaultValueSql("(newid())");
             entity.Property(e => e.CreatedAt)
@@ -364,9 +358,9 @@ public partial class EvMarketplaceContext : DbContext
 
         modelBuilder.Entity<Vehicle>(entity =>
         {
-            entity.HasKey(e => e.VehicleId).HasName("PK__Vehicles__476B5492B347C397");
+            entity.HasKey(e => e.VehicleId).HasName("PK__Vehicles__476B549209795B79");
 
-            entity.HasIndex(e => e.PostId, "UQ__Vehicles__AA126019CEA43B82").IsUnique();
+            entity.HasIndex(e => e.PostId, "UQ__Vehicles__AA12601907B40EBA").IsUnique();
 
             entity.Property(e => e.VehicleId).HasDefaultValueSql("(newid())");
             entity.Property(e => e.Model).HasMaxLength(100);
@@ -382,7 +376,7 @@ public partial class EvMarketplaceContext : DbContext
 
         modelBuilder.Entity<VehicleBrand>(entity =>
         {
-            entity.HasKey(e => e.BrandId).HasName("PK__VehicleB__DAD4F05EAF41E6D2");
+            entity.HasKey(e => e.BrandId).HasName("PK__VehicleB__DAD4F05E2CB44306");
 
             entity.Property(e => e.BrandId).HasDefaultValueSql("(newid())");
             entity.Property(e => e.Name).HasMaxLength(100);
@@ -391,9 +385,9 @@ public partial class EvMarketplaceContext : DbContext
 
         modelBuilder.Entity<Wallet>(entity =>
         {
-            entity.HasKey(e => e.WalletId).HasName("PK__Wallets__84D4F90E0B38E53F");
+            entity.HasKey(e => e.WalletId).HasName("PK__Wallets__84D4F90E0E5968F2");
 
-            entity.HasIndex(e => e.UserId, "UQ__Wallets__1788CC4DF667E0CE").IsUnique();
+            entity.HasIndex(e => e.UserId, "UQ__Wallets__1788CC4D4177269D").IsUnique();
 
             entity.Property(e => e.WalletId).HasDefaultValueSql("(newid())");
             entity.Property(e => e.Balance)
@@ -410,7 +404,7 @@ public partial class EvMarketplaceContext : DbContext
 
         modelBuilder.Entity<WalletTransaction>(entity =>
         {
-            entity.HasKey(e => e.WalletTransactionId).HasName("PK__WalletTr__7184AEEF288F3276");
+            entity.HasKey(e => e.WalletTransactionId).HasName("PK__WalletTr__7184AEEFB7B82153");
 
             entity.Property(e => e.WalletTransactionId).HasDefaultValueSql("(newid())");
             entity.Property(e => e.Amount).HasColumnType("decimal(18, 2)");
@@ -432,7 +426,7 @@ public partial class EvMarketplaceContext : DbContext
 
         modelBuilder.Entity<WithdrawalRequest>(entity =>
         {
-            entity.HasKey(e => e.WithdrawalId).HasName("PK__Withdraw__7C842C6EB9C1FFEF");
+            entity.HasKey(e => e.WithdrawalId).HasName("PK__Withdraw__7C842C6E655F1CE6");
 
             entity.Property(e => e.WithdrawalId).HasDefaultValueSql("(newid())");
             entity.Property(e => e.AdminNote).HasMaxLength(500);
