@@ -16,19 +16,36 @@ namespace EVMarketPlace.Services.Implements
         private readonly CartRepository _cartRepository;
         private readonly CartItemRepository _cartItemRepository;
         private readonly IWalletService _walletService;
+        private readonly SystemSettingRepository _systemSettingRepository;
 
         public TransactionService(
             TransactionRepository transactionRepository,
             PostRepository postRepository,
             CartRepository cartRepository,
             CartItemRepository cartItemRepository,
-            IWalletService walletService)
+            IWalletService walletService,
+            SystemSettingRepository systemSettingRepository)
         {
             _transactionRepository = transactionRepository;
             _postRepository = postRepository;
             _cartRepository = cartRepository;
             _cartItemRepository = cartItemRepository;
             _walletService = walletService;
+            _systemSettingRepository = systemSettingRepository;
+        }
+
+
+        //  HÀM TÍNH HOA HỒNG (MỀM - LẤY TỪ DATABASE)
+        private async Task<(decimal rate, decimal amount, decimal sellerReceived)> CalculateCommissionAsync(decimal totalAmount)
+        {
+            // Lấy tỷ lệ hoa hồng từ SystemSettings
+            var rate = await _systemSettingRepository.GetCommissionRateAsync();
+
+            // Tính toán
+            var commissionAmount = Math.Round(totalAmount * rate / 100, 2);
+            var sellerReceived = totalAmount - commissionAmount;
+
+            return (rate, commissionAmount, sellerReceived);
         }
 
         //THANH TOÁN GIỎ HÀNG
@@ -42,7 +59,7 @@ namespace EVMarketPlace.Services.Implements
                     return Response(401, "Người dùng chưa xác thực.");
                 }
 
-                // Validate payment method
+                // validate payment để tránh lỗi
                 if (!Enum.TryParse<PaymentMethodEnum>(request.PaymentMethod, true, out _))
                 {
                     return Response(400, "Phương thức thanh toán không hợp lệ.");
@@ -106,27 +123,39 @@ namespace EVMarketPlace.Services.Implements
                         return Response(400, $"Số dư không đủ. Cần {totalAmount:N0} VNĐ, hiện có {buyerBalance:N0} VNĐ.");
                     }
 
+                    var cartTransactionId = Guid.NewGuid().ToString();
+
+
                     // Trừ tiền người mua
-                    var deductResult = await _walletService.DeductAsync(userId, totalAmount);
+                    var deductResult = await _walletService.DeductAsync(userId, totalAmount, cartTransactionId);
                     if (int.Parse(deductResult.Status) != 200)
                     {
                         return Response(400, "Không thể trừ tiền từ ví. Vui lòng thử lại.");
                     }
 
                     // Track các seller đã nhận tiền để rollback nếu cần
-                    var paidSellers = new List<(Guid SellerId, decimal Amount)>();
+                    var paidSellers = new List<(Guid SellerId, decimal Amount, string TransactionId)>();
                     bool paymentFailed = false;
 
-                    // Cộng tiền cho từng người bán
                     foreach (var item in validItems)
                     {
-                        var post = await _postRepository.GetByIdAsync(item.PostId.Value);
+                        var post = await _postRepository.GetPostByIdWithImageAsync(item.PostId.Value);
+
+                        // var seller recived để lấy số tiền sau khi trừ hoa hồng
+                        var (_, _, sellerReceived) = await CalculateCommissionAsync(post.Price ?? 0);
+
+                        var itemTransactionId = Guid.NewGuid().ToString();
+
+                        // ✅ FIX: Xử lý cả trường hợp Title = "string" (lỗi data)
+                        var productTitle = string.IsNullOrWhiteSpace(post.Title) || post.Title.Equals("string", StringComparison.OrdinalIgnoreCase)
+                            ? $"Sản phẩm #{post.PostId.ToString().Substring(0, 8)}"
+                            : post.Title;
 
                         var topUpResult = await _walletService.AddSalesRevenueAsync(
-                            post.UserId,           // sellerId
-                            post.Price ?? 0,                      // amount
-                            Guid.NewGuid().ToString(),            // transactionId (tạm thời, sẽ update sau)
-                            post.Title ?? "Sản phẩm"             // postTitle
+                            sellerId: post.UserId,
+                            amount: sellerReceived,
+                            transactionId: itemTransactionId,
+                            postTitle: productTitle //  Sử dụng giá trị đã xử lý
                         );
 
                         if (int.Parse(topUpResult.Status) != 200)
@@ -135,22 +164,21 @@ namespace EVMarketPlace.Services.Implements
                             break;
                         }
 
-                        paidSellers.Add((post.UserId , post.Price ?? 0));
+                        paidSellers.Add((post.UserId, sellerReceived, itemTransactionId));
                     }
-
                     // Nếu có lỗi, rollback TOÀN BỘ
                     if (paymentFailed)
                     {
                         // Lấy lại tiền từ các seller đã nhận
-                        foreach (var (sellerId, amount) in paidSellers)
+                        foreach (var (sellerId, amount, transId) in paidSellers)
                         {
-                            await _walletService.DeductAsync(sellerId, amount);
+                            await _walletService.DeductAsync(sellerId, amount, $"REFUND-{transId}");
                         }
 
                         // Hoàn tiền lại cho buyer
                         await _walletService.TopUpWalletAsync(
                             totalAmount,
-                            $"REFUND-{Guid.NewGuid()}",
+                            $"REFUND-{cartTransactionId}", // tạo mã giao dịch hoàn tiền mới
                             "REFUND",
                             userId
                         );
@@ -161,18 +189,26 @@ namespace EVMarketPlace.Services.Implements
 
                 // Tạo transaction cho từng sản phẩm
                 var transactions = new List<Transaction>();
+                decimal totalCommission = 0;
+                decimal totalSellerReceived = 0;
 
                 foreach (var item in validItems)
                 {
-                    var post = await _postRepository.GetByIdAsync(item.PostId.Value);
+                    
+                    var post = await _postRepository.GetPostByIdAsync(item.PostId.Value); // lấy lại post để tạo 
+                    if (post == null) continue; // bỏ qua nếu post không tồn tại
+                    var (commissionRate, commissionAmount, sellerReceived) = 
+                        await CalculateCommissionAsync(post.Price ?? 0); // tính hoa hồng cho từng sản phẩm
 
-                    // Cập nhật trạng thái sản phẩm thành SOLD
-                    var postDetail = await _postRepository.GetPostByIdAsync(item.PostId.Value);
-                    if (postDetail != null)
+                    totalCommission += commissionAmount; // cộng dồn hoa hồng 
+                    totalSellerReceived += sellerReceived; // cộng dồn số tiền seller nhận được
+
+                     // Cập nhật trạng thái sản phẩm thành SOLD
+                    try
                     {
-                        postDetail.Status = PostStatusEnum.SOLD.ToString();
-                        await _postRepository.ForceUpdateAsync(postDetail);
+                        await _postRepository.UpdateStatusSoldAsync(item.PostId.Value);
                     }
+                    catch { }
 
                     // Tạo transaction
                     var transaction = new Transaction
@@ -181,8 +217,11 @@ namespace EVMarketPlace.Services.Implements
                         BuyerId = userId,
                         SellerId = post.UserId,
                         PostId = item.PostId,
-                        CartId = request.CartId, // ← Lưu CartId
+                        CartId = request.CartId,
                         Amount = post.Price,
+                        CommissionRate = commissionRate,
+                        CommissionAmount = commissionAmount,
+                        SellerReceived = sellerReceived,
                         PaymentMethod = request.PaymentMethod,
                         Status = TransactionStatusEnum.COMPLETED.ToString(),
                         CreatedAt = DateTime.UtcNow,
@@ -192,9 +231,17 @@ namespace EVMarketPlace.Services.Implements
                         Note = request.Note
                     };
 
-                    await _transactionRepository.CreateAsync(transaction);
-                    transactions.Add(transaction);
+                    try
+                    {
+                        await _transactionRepository.CreateAsync(transaction);
+                        transactions.Add(transaction);
+                    }
+                    catch (Exception ex)
+                    {
+                        return Response(500, $"Lỗi lưu giao dịch: {ex.InnerException?.Message ?? ex.Message}");
+                    }
                 }
+
 
                 // Xóa giỏ hàng sau khi thanh toán thành công
                 foreach (var item in validItems)
@@ -205,6 +252,8 @@ namespace EVMarketPlace.Services.Implements
                 return Response(201, $"Thanh toán thành công {transactions.Count} sản phẩm từ giỏ hàng. Tổng: {totalAmount:N0} VNĐ", new
                 {
                     TotalAmount = totalAmount,
+                    TotalCommission = totalCommission,
+                    TotalSellerReceived = totalSellerReceived,
                     TotalItems = transactions.Count,
                     CartId = request.CartId,
                     Transactions = transactions.Select(t => new
@@ -212,6 +261,9 @@ namespace EVMarketPlace.Services.Implements
                         t.TransactionId,
                         t.PostId,
                         t.Amount,
+                        t.CommissionRate,
+                        t.CommissionAmount,
+                        t.SellerReceived,
                         t.Status
                     })
                 });
@@ -223,123 +275,167 @@ namespace EVMarketPlace.Services.Implements
         }
 
         // Tạo giao dịch mới - Thanh toán và hoàn thành ngay lập tức
-// Tạo giao dịch mới - Thanh toán và hoàn thành ngay lập tức
-public async Task<BaseResponse> CreateTransactionAsync(ClaimsPrincipal user, CreateTransactionRequest request)
-{
-    try
-    {
-        var userId = GetUserId(user);
-        if (userId == Guid.Empty)
+        public async Task<BaseResponse> CreateTransactionAsync(ClaimsPrincipal user, CreateTransactionRequest request)
         {
-            return Response(401, "Người dùng chưa xác thực.");
-        }
-
-        // Validate payment method
-        if (!Enum.TryParse<PaymentMethodEnum>(request.PaymentMethod, true, out _))
-        {
-            return Response(400, "Phương thức thanh toán không hợp lệ.");
-        }
-
-        // Lấy thông tin sản phẩm
-        var post = await _postRepository.GetByIdAsync(request.PostId);
-        if (post == null)
-        {
-            return Response(404, "Sản phẩm không tồn tại.");
-        }
-
-        // Không thể mua sản phẩm của chính mình
-        if (post.UserId == userId)
-        {
-            return Response(400, "Bạn không thể mua sản phẩm của chính mình.");
-        }
-
-        // Chỉ mua được sản phẩm đã APPROVED
-        if (post.Status != PostStatusEnum.APPROVED.ToString())
-        {
-            var statusMessage = post.Status switch
+            try
             {
-                var s when s == PostStatusEnum.PENDING.ToString() => "Sản phẩm đang chờ duyệt.",
-                var s when s == PostStatusEnum.REJECTED.ToString() => "Sản phẩm đã bị từ chối.",
-                var s when s == PostStatusEnum.SOLD.ToString() => "Sản phẩm đã được bán.",
-                var s when s == PostStatusEnum.DELETED.ToString() => "Sản phẩm đã bị xóa.",
-                _ => "Sản phẩm không có sẵn."
-            };
-            return Response(400, statusMessage);
-        }
+                var userId = GetUserId(user);
+                if (userId == Guid.Empty)
+                {
+                    return Response(401, "Người dùng chưa xác thực.");
+                }
 
-        // ✅ TẠO TRANSACTION TRƯỚC để có TransactionId
-        var transaction = new Transaction
-        {
-            TransactionId = Guid.NewGuid(),
-            BuyerId = userId,
-            SellerId = post.UserId,
-            PostId = request.PostId,
-            Amount = post.Price,
-            PaymentMethod = request.PaymentMethod,
-            Status = TransactionStatusEnum.COMPLETED.ToString(),
-            CreatedAt = DateTime.UtcNow,
-            ReceiverName = request.ReceiverName,
-            ReceiverPhone = request.ReceiverPhone,
-            ReceiverAddress = request.ReceiverAddress,
-            Note = request.Note
-        };
+                // Validate payment method
+                if (!Enum.TryParse<PaymentMethodEnum>(request.PaymentMethod, true, out _))
+                {
+                    return Response(400, "Phương thức thanh toán không hợp lệ.");
+                }
 
-        // Kiểm tra số dư ví người mua (CHỈ KHI DÙNG WALLET)
-        if (request.PaymentMethod == "WALLET")
-        {
-            var buyerBalance = await _walletService.GetBalanceAsync();
-            if (buyerBalance < post.Price)
-            {
-                return Response(400, $"Số dư không đủ. Cần {post.Price:N0} VNĐ, hiện có {buyerBalance:N0} VNĐ.");
+                // Lấy thông tin sản phẩm
+                var post = await _postRepository.GetByIdAsync(request.PostId);
+                if (post == null)
+                {
+                    return Response(404, "Sản phẩm không tồn tại.");
+                }
+
+                // Không thể mua sản phẩm của chính mình
+                if (post.UserId == userId)
+                {
+                    return Response(400, "Bạn không thể mua sản phẩm của chính mình.");
+                }
+
+                // Chỉ mua được sản phẩm đã APPROVED
+                if (post.Status != PostStatusEnum.APPROVED.ToString())
+                {
+                    var statusMessage = post.Status switch
+                    {
+                        var s when s == PostStatusEnum.PENDING.ToString() => "Sản phẩm đang chờ duyệt.",
+                        var s when s == PostStatusEnum.REJECTED.ToString() => "Sản phẩm đã bị từ chối.",
+                        var s when s == PostStatusEnum.SOLD.ToString() => "Sản phẩm đã được bán.",
+                        var s when s == PostStatusEnum.DELETED.ToString() => "Sản phẩm đã bị xóa.",
+                        _ => "Sản phẩm không có sẵn."
+                    };
+                    return Response(400, statusMessage);
+                }
+
+                // tính hoa hồng từ database
+                var (commissionRate, commissionAmount, sellerReceived) =
+                    await CalculateCommissionAsync(post.Price ?? 0);
+
+                // TẠO TRANSACTION ID TRƯỚC
+                var transactionId = Guid.NewGuid();
+
+                var transaction = new Transaction
+                {
+                    TransactionId = transactionId,
+                    BuyerId = userId,
+                    SellerId = post.UserId,
+                    PostId = request.PostId,
+                    Amount = post.Price,
+                    CommissionRate = commissionRate,
+                    CommissionAmount = commissionAmount,
+                    SellerReceived = sellerReceived,
+                    PaymentMethod = request.PaymentMethod,
+                    Status = TransactionStatusEnum.COMPLETED.ToString(),
+                    CreatedAt = DateTime.UtcNow,
+                    ReceiverName = request.ReceiverName,
+                    ReceiverPhone = request.ReceiverPhone,
+                    ReceiverAddress = request.ReceiverAddress,
+                    Note = request.Note
+                };
+
+                // Kiểm tra số dư ví người mua (CHỈ KHI DÙNG WALLET)
+                if (request.PaymentMethod == "WALLET")
+                {
+                    var buyerBalance = await _walletService.GetBalanceAsync();
+                    if (buyerBalance < post.Price)
+                    {
+                        return Response(400, $"Số dư không đủ. Cần {post.Price:N0} VNĐ, hiện có {buyerBalance:N0} VNĐ.");
+                    }
+
+                    // Trừ tiền người mua
+                    var deductResult = await _walletService.DeductAsync(userId, post.Price ?? 0, transactionId.ToString());
+                    if (int.Parse(deductResult.Status) != 200)
+                    {
+                        return Response(400, "Không thể trừ tiền từ ví. Vui lòng thử lại.");
+                    }
+
+                    // ✅ CẬP NHẬT TRẠNG THÁI SẢN PHẨM TRƯỚC khi cộng tiền
+                    try
+                    {
+                        await _postRepository.UpdateStatusSoldAsync(request.PostId);
+                    }
+                    catch (Exception ex)
+                    {
+                        await _walletService.TopUpWalletAsync(
+                            post.Price ?? 0,
+                            $"REFUND-{Guid.NewGuid()}",
+                            "REFUND",
+                            userId
+                        );
+                        return Response(400, $"Cập nhật sản phẩm thất bại: {ex.InnerException?.Message ?? ex.Message}");
+                    }
+
+                    // CỘNG TIỀN CHO SELLER với TransactionId đã tạo
+                    var topUpResult = await _walletService.AddSalesRevenueAsync(
+                        sellerId: post.UserId,
+                        amount: sellerReceived,
+                        transactionId: transactionId.ToString(),
+                        postTitle: post.Title ?? "Sản phẩm"
+                    );
+
+                    if (int.Parse(topUpResult.Status) != 200)
+                    {
+                        // Rollback: Đặt lại post thành APPROVED
+                        try
+                        {
+                            await _postRepository.UpdateStatusApprovedAsync(request.PostId);
+                        }
+                        catch { }
+
+                        // Hoàn tiền cho buyer
+                        await _walletService.TopUpWalletAsync(
+                            post.Price ?? 0,
+                            $"REFUND-{Guid.NewGuid()}",
+                            "REFUND",
+                            userId
+                        );
+                        return Response(400, "Không thể chuyển tiền cho người bán. Giao dịch đã được hoàn tác.");
+                    }
+                }
+                else
+                {
+                    // Phương thức thanh toán khác (VNPay, etc)
+                    try
+                    {
+                        await _postRepository.UpdateStatusSoldAsync(request.PostId);
+                    }
+                    catch (Exception ex)
+                    {
+                        return Response(400, $"Cập nhật sản phẩm thất bại: {ex.InnerException?.Message ?? ex.Message}");
+                    }
+                }
+
+                // ✅ LƯU TRANSACTION VÀO DATABASE (BỨC CUỐI CÙNG)
+                try
+                {
+                    await _transactionRepository.CreateAsync(transaction);
+                }
+                catch (Exception ex)
+                {
+                    return Response(500, $"Lỗi lưu giao dịch: {ex.InnerException?.Message ?? ex.Message}");
+                }
+
+                var response = await MapToDTO(transaction);
+                return Response(201,
+                    $"Thanh toán thành công. Phí hoa hồng {commissionRate}% = {commissionAmount:N0} VNĐ. Người bán nhận: {sellerReceived:N0} VNĐ",
+                    response);
             }
-
-            // Trừ tiền người mua
-            var deductResult = await _walletService.DeductAsync(userId, post.Price ?? 0);
-            if (int.Parse(deductResult.Status) != 200)
+            catch (Exception ex)
             {
-                return Response(400, "Không thể trừ tiền từ ví. Vui lòng thử lại.");
-            }
-
-            // ✅ SỬA: Đổi sang AddSalesRevenueAsync
-            var topUpResult = await _walletService.AddSalesRevenueAsync(
-                post.UserId,
-                post.Price ?? 0,                         
-                transaction.TransactionId.ToString(),    
-                post.Title ?? "Sản phẩm"                
-            );
-
-            if (int.Parse(topUpResult.Status) != 200)
-            {
-                // Nếu không chuyển được tiền cho seller thì hoàn lại cho buyer
-                await _walletService.TopUpWalletAsync(
-                    post.Price ?? 0,
-                    $"REFUND-{Guid.NewGuid()}",
-                    "REFUND",
-                    userId
-                );
-                return Response(400, "Không thể chuyển tiền cho người bán. Giao dịch đã được hoàn tác.");
+                return Response(500, $"Lỗi: {ex.InnerException?.Message ?? ex.Message}");
             }
         }
-
-        // Cập nhật trạng thái sản phẩm thành SOLD
-        var postDetail = await _postRepository.GetPostByIdAsync(request.PostId);
-        if (postDetail != null)
-        {
-            postDetail.Status = PostStatusEnum.SOLD.ToString();
-            await _postRepository.ForceUpdateAsync(postDetail);
-        }
-
-        // Lưu transaction vào database
-        await _transactionRepository.CreateAsync(transaction);
-
-        var response = await MapToDTO(transaction);
-        return Response(201, "Thanh toán thành công. Giao dịch đã hoàn thành.", response);
-    }
-    catch (Exception ex)
-    {
-        return Response(500, $"Lỗi: {ex.Message}");
-    }
-}
 
         // Lấy chi tiết giao dịch
         public async Task<BaseResponse> GetTransactionByIdAsync(ClaimsPrincipal user, Guid transactionId)
@@ -561,7 +657,11 @@ public async Task<BaseResponse> CreateTransactionAsync(ClaimsPrincipal user, Cre
                 }
 
                 // Trừ tiền từ người bán
-                var deductResult = await _walletService.DeductAsync(transaction.SellerId ?? Guid.Empty, transaction.Amount ?? 0);
+                var deductResult = await _walletService.DeductAsync(
+                    transaction.SellerId ?? Guid.Empty,
+                    transaction.Amount ?? 0,
+                    $"CANCEL-{transaction.TransactionId}" // Cung cấp ID để ghi log
+                ); 
                 if (int.Parse(deductResult.Status) != 200)
                 {
                     return Response(400, "Không thể trừ tiền từ người bán. Vui lòng liên hệ hỗ trợ.");
@@ -611,8 +711,8 @@ public async Task<BaseResponse> CreateTransactionAsync(ClaimsPrincipal user, Cre
         // Helper: Lấy UserId
         private Guid GetUserId(ClaimsPrincipal user)
         {
-            var claim = user.FindFirst(ClaimTypes.NameIdentifier)?.Value
-                     ?? user.FindFirst("UserId")?.Value;
+            var claim = user.FindFirst(ClaimTypes.NameIdentifier)?.Value // lấy UserId từ ClaimTypes.NameIdentifier
+                     ?? user.FindFirst("UserId")?.Value; // hoặc từ claim "UserId" nếu không có
 
             return Guid.TryParse(claim, out var id) ? id : Guid.Empty;
         }

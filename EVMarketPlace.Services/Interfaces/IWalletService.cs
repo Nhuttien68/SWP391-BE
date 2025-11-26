@@ -12,7 +12,7 @@ namespace EVMarketPlace.Services.Interfaces
 
         Task<BaseResponse> WithdrawWalletAsync(decimal amount);
         Task<decimal> GetBalanceAsync();
-        Task<BaseResponse> DeductAsync(Guid userId, decimal amount);
+        Task<BaseResponse> DeductAsync(Guid userId, decimal amount, string transactionId);
 
         Task<BaseResponse> GetWalletTransactionHistoryAsync();
         Task<BaseResponse> AddSalesRevenueAsync(Guid sellerId, decimal amount, string transactionId, string postTitle);
