@@ -17,6 +17,9 @@ namespace EVMarketPlace.Services.Implements
         private readonly CartItemRepository _cartItemRepository;
         private readonly IWalletService _walletService;
         private readonly SystemSettingRepository _systemSettingRepository;
+        private readonly WalletRepository _walletRepository;
+        private readonly WalletTransactionRepository _walletTransactionRepository;
+        private readonly UserRepository _userRepository;
 
         public TransactionService(
             TransactionRepository transactionRepository,
@@ -24,7 +27,10 @@ namespace EVMarketPlace.Services.Implements
             CartRepository cartRepository,
             CartItemRepository cartItemRepository,
             IWalletService walletService,
-            SystemSettingRepository systemSettingRepository)
+            SystemSettingRepository systemSettingRepository,
+            WalletRepository walletRepository,
+            WalletTransactionRepository walletTransactionRepository,
+            UserRepository userRepository)
         {
             _transactionRepository = transactionRepository;
             _postRepository = postRepository;
@@ -32,7 +38,11 @@ namespace EVMarketPlace.Services.Implements
             _cartItemRepository = cartItemRepository;
             _walletService = walletService;
             _systemSettingRepository = systemSettingRepository;
+            _walletRepository = walletRepository;
+            _walletTransactionRepository = walletTransactionRepository;
+            _userRepository = userRepository;
         }
+
 
 
         //  HÀM TÍNH HOA HỒNG (MỀM - LẤY TỪ DATABASE)
@@ -137,6 +147,8 @@ namespace EVMarketPlace.Services.Implements
                     var paidSellers = new List<(Guid SellerId, decimal Amount, string TransactionId)>();
                     bool paymentFailed = false;
 
+
+
                     foreach (var item in validItems)
                     {
                         var post = await _postRepository.GetPostByIdWithImageAsync(item.PostId.Value);
@@ -146,7 +158,6 @@ namespace EVMarketPlace.Services.Implements
 
                         var itemTransactionId = Guid.NewGuid().ToString();
 
-                        // ✅ FIX: Xử lý cả trường hợp Title = "string" (lỗi data)
                         var productTitle = string.IsNullOrWhiteSpace(post.Title) || post.Title.Equals("string", StringComparison.OrdinalIgnoreCase)
                             ? $"Sản phẩm #{post.PostId.ToString().Substring(0, 8)}"
                             : post.Title;
@@ -165,6 +176,18 @@ namespace EVMarketPlace.Services.Implements
                         }
 
                         paidSellers.Add((post.UserId, sellerReceived, itemTransactionId));
+                        // CỘNG HOA HỒNG VÀO TÀI KHOẢN ADMIN
+                        var commissionSuccess = await CreditCommissionToAdminAsync( // hàm riêng để cộng hoa hồng
+                            commissionAmount: (post.Price ?? 0) - sellerReceived, // hoa hồng là phần chênh lệch
+                            transactionId: itemTransactionId, // dùng chung transactionId với seller để dễ tracking
+                            description: $"Hoa hồng từ giao dịch - Sản phẩm: {productTitle}"
+                        );
+
+                        if (!commissionSuccess) // nếu cộng hoa hồng thất bại
+                        {
+                            paymentFailed = true; // đánh dấu thất bại
+                            break;
+                        }
                     }
                     // Nếu có lỗi, rollback TOÀN BỘ
                     if (paymentFailed)
@@ -194,16 +217,16 @@ namespace EVMarketPlace.Services.Implements
 
                 foreach (var item in validItems)
                 {
-                    
+
                     var post = await _postRepository.GetPostByIdAsync(item.PostId.Value); // lấy lại post để tạo 
                     if (post == null) continue; // bỏ qua nếu post không tồn tại
-                    var (commissionRate, commissionAmount, sellerReceived) = 
+                    var (commissionRate, commissionAmount, sellerReceived) =
                         await CalculateCommissionAsync(post.Price ?? 0); // tính hoa hồng cho từng sản phẩm
 
                     totalCommission += commissionAmount; // cộng dồn hoa hồng 
                     totalSellerReceived += sellerReceived; // cộng dồn số tiền seller nhận được
 
-                     // Cập nhật trạng thái sản phẩm thành SOLD
+                    // Cập nhật trạng thái sản phẩm thành SOLD
                     try
                     {
                         await _postRepository.UpdateStatusSoldAsync(item.PostId.Value);
@@ -360,7 +383,7 @@ namespace EVMarketPlace.Services.Implements
                         return Response(400, "Không thể trừ tiền từ ví. Vui lòng thử lại.");
                     }
 
-                    // ✅ CẬP NHẬT TRẠNG THÁI SẢN PHẨM TRƯỚC khi cộng tiền
+                    //CẬP NHẬT TRẠNG THÁI SẢN PHẨM TRƯỚC khi cộng tiền
                     try
                     {
                         await _postRepository.UpdateStatusSoldAsync(request.PostId);
@@ -402,10 +425,41 @@ namespace EVMarketPlace.Services.Implements
                         );
                         return Response(400, "Không thể chuyển tiền cho người bán. Giao dịch đã được hoàn tác.");
                     }
+
+                    //CỘNG HOA HỒNG VÀO TÀI KHOẢN ADMIN
+                    var commissionSuccess = await CreditCommissionToAdminAsync( // hàm riêng để cộng hoa hồng
+                        commissionAmount, // hoa hồng là phần chênh lệch 
+                        transactionId.ToString(), // dùng chung transactionId với seller để dễ tracking
+                        $"Hoa hồng từ giao dịch - Sản phẩm: {post.Title ?? "N/A"}"
+                    );
+
+                    if (!commissionSuccess) // nếu cộng hoa hồng thất bại
+                    {
+                        // Rollback: Trừ lại tiền từ seller
+                        await _walletService.DeductAsync(post.UserId, sellerReceived, $"ROLLBACK-{transactionId}"); // tạo mã giao dịch rollback
+
+                        // Rollback: Đặt lại post thành APPROVED
+                        try
+                        {
+                            await _postRepository.UpdateStatusApprovedAsync(request.PostId);
+                        }
+                        catch { }
+
+                        // Hoàn tiền cho buyer
+                        await _walletService.TopUpWalletAsync(
+                            post.Price ?? 0,
+                            $"REFUND-{Guid.NewGuid()}",
+                            "REFUND",
+                            userId
+                        );
+
+                        return Response(400, "Không thể xử lý hoa hồng. Giao dịch đã được hoàn tác.");
+                    }
+
                 }
                 else
                 {
-                    // Phương thức thanh toán khác (VNPay, etc)
+
                     try
                     {
                         await _postRepository.UpdateStatusSoldAsync(request.PostId);
@@ -416,7 +470,7 @@ namespace EVMarketPlace.Services.Implements
                     }
                 }
 
-                // ✅ LƯU TRANSACTION VÀO DATABASE (BỨC CUỐI CÙNG)
+                // LƯU TRANSACTION VÀO DATABASE
                 try
                 {
                     await _transactionRepository.CreateAsync(transaction);
@@ -661,7 +715,7 @@ namespace EVMarketPlace.Services.Implements
                     transaction.SellerId ?? Guid.Empty,
                     transaction.Amount ?? 0,
                     $"CANCEL-{transaction.TransactionId}" // Cung cấp ID để ghi log
-                ); 
+                );
                 if (int.Parse(deductResult.Status) != 200)
                 {
                     return Response(400, "Không thể trừ tiền từ người bán. Vui lòng liên hệ hỗ trợ.");
@@ -683,6 +737,56 @@ namespace EVMarketPlace.Services.Implements
             catch (Exception ex)
             {
                 return Response(500, $"Lỗi: {ex.Message}");
+            }
+        }
+
+        // Cộng phí hoa hồng vào tài khoản Admin
+        private async Task<bool> CreditCommissionToAdminAsync(decimal commissionAmount, string transactionId, string description)
+        {
+            try
+            {
+                // 1. Lấy admin user (Role = ADMIN)
+                var adminUser = await _userRepository.GetAdminUserAsync();
+                if (adminUser == null)
+                {
+                    return false;
+                }
+
+                // 2. Lấy ví admin
+                var adminWallet = await _walletRepository.GetWalletByUserIdAsync(adminUser.UserId);
+                if (adminWallet == null)
+                {
+                    return false;
+                }
+
+                // 3. Cộng tiền vào ví admin
+                var walletResult = await _walletRepository.TryUpdateBalanceAsync(adminWallet.WalletId, commissionAmount);
+                if (!walletResult.Success)
+                {
+                    return false;
+                }
+
+                // 4. Tạo giao dịch WalletTransaction cho admin
+                var adminTransaction = new WalletTransaction
+                {
+                    WalletTransactionId = Guid.NewGuid(),
+                    WalletId = adminWallet.WalletId,
+                    TransactionType = "COMMISSION_FEE",
+                    Amount = commissionAmount,
+                    BalanceBefore = adminWallet.Balance,
+                    BalanceAfter = adminWallet.Balance + commissionAmount,
+                    ReferenceId = transactionId,
+                    PaymentMethod = "WALLET",
+                    Description = description,
+                    CreatedAt = DateTime.UtcNow
+                };
+                await _walletTransactionRepository.CreateAsync(adminTransaction); // lưu giao dịch ví
+
+                return true;
+            }
+            catch
+            {
+                return false;
             }
         }
 
@@ -763,12 +867,12 @@ namespace EVMarketPlace.Services.Implements
                 PaymentMethod = t.PaymentMethod ?? "N/A",
                 CreatedAt = t.CreatedAt ?? DateTime.UtcNow,
                 PostImageUrl = t.Post?.PostImages?.FirstOrDefault()?.ImageUrl,
-                
+
                 // Thông tin người bán
                 SellerId = t.SellerId,
                 SellerName = t.Seller?.FullName ?? "N/A",
                 SellerEmail = t.Seller?.Email,
-                
+
                 // Thông tin người mua
                 BuyerId = t.BuyerId,
                 BuyerName = t.Buyer?.FullName ?? "N/A",

@@ -209,7 +209,6 @@ CREATE TABLE CartItems (
 -- TRANSACTIONS
 -- =============================================
 CREATE TABLE Transactions (
-    COMISSIONRATE DECIMAL(5,2) DEFAULT 2.5, -- hoa hồng sàn giao dịch
     TransactionId UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),
     BuyerId UNIQUEIDENTIFIER,
     SellerId UNIQUEIDENTIFIER,
