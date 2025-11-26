@@ -3,23 +3,22 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace EVMarketPlace.Services.Implements
 {
     public class AuctionBackgroundService : BackgroundService
     {
-        private readonly IServiceProvider _serviceProvider;
+        private readonly IServiceScopeFactory _scopeFactory;
         private readonly ILogger<AuctionBackgroundService> _logger;
-        // ⏱️ TEST MODE: Check mỗi 10 giây thay vì 1 phút
-        private readonly TimeSpan _interval = TimeSpan.FromSeconds(10);
 
-        public AuctionBackgroundService(IServiceProvider serviceProvider, ILogger<AuctionBackgroundService> logger)
+        private readonly TimeSpan _interval = TimeSpan.FromSeconds(10); // Test mode
+
+        public AuctionBackgroundService(IServiceScopeFactory scopeFactory,
+                                        ILogger<AuctionBackgroundService> logger)
         {
-            _serviceProvider = serviceProvider;
+            _scopeFactory = scopeFactory;
             _logger = logger;
         }
 
@@ -31,11 +30,9 @@ namespace EVMarketPlace.Services.Implements
             {
                 try
                 {
-                    // ✅ Tạo scope mới để dùng các service dạng Scoped (như IAuctionService, DbContext, Repository,...)
-                    using (var scope = _serviceProvider.CreateScope())
+                    using (var scope = _scopeFactory.CreateScope())
                     {
                         var auctionService = scope.ServiceProvider.GetRequiredService<IAuctionService>();
-
                         await auctionService.CloseExpiredAuctionsAsync();
 
                         _logger.LogInformation("✅ Closed expired auctions at {Time}", DateTime.Now);

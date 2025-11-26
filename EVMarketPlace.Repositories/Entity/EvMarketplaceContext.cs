@@ -73,6 +73,8 @@ public partial class EvMarketplaceContext : DbContext
 
         return connectionString;
     }
+    protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+       => optionsBuilder.UseSqlServer(GetConnectionString("DefaultConnection"));
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
