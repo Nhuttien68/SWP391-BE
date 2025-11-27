@@ -21,11 +21,13 @@ namespace EVMarketPlace.Services.Implements
        private readonly ReviewRepository _reviewRepository;
        private readonly TransactionRepository _transactionRepo;
         private readonly UserUtility _userUtility;
-        public ReviewService(ReviewRepository reviewRepository, UserUtility userUtility,TransactionRepository transactionRepository)
+        private readonly TimeHelper _timeHelper;
+        public ReviewService(TimeHelper timeHelper,ReviewRepository reviewRepository, UserUtility userUtility,TransactionRepository transactionRepository)
         {
             _reviewRepository = reviewRepository;
             _transactionRepo = transactionRepository;
             _userUtility = userUtility;
+            _timeHelper = timeHelper;
         }
         // Tạo đánh giá cho bài đăng
 
@@ -63,7 +65,8 @@ namespace EVMarketPlace.Services.Implements
                         Status = StatusCodes.Status409Conflict.ToString(),
                         Message = "You have already reviewed this post for this transaction"
                     };
- 
+                var vietNamtime = _timeHelper.GetVietNamTime();
+
                 var review = new Review
                 {
                     ReviewId = Guid.NewGuid(),
@@ -73,7 +76,7 @@ namespace EVMarketPlace.Services.Implements
                     ReviewTargetType = ReviewTypeEnum.PostReview.ToString(),
                     Rating = dto.Rating,
                     Comment = dto.Comment,
-                    CreatedAt = DateTime.UtcNow
+                    CreatedAt = vietNamtime
                 };
 
                 await _reviewRepository.CreateAsync(review);
@@ -134,7 +137,8 @@ namespace EVMarketPlace.Services.Implements
                         Message = "You have already reviewed this seller for this transaction"
                     };
 
-               
+                var vietNamtime = _timeHelper.GetVietNamTime();
+
                 var review = new Review
                 {
                     ReviewId = Guid.NewGuid(),
@@ -144,7 +148,7 @@ namespace EVMarketPlace.Services.Implements
                     ReviewTargetType = ReviewTypeEnum.SellerReview.ToString(),
                     Rating = dto.Rating,
                     Comment = dto.Comment,
-                    CreatedAt = DateTime.UtcNow
+                    CreatedAt = vietNamtime
                 };
 
                 await _reviewRepository.CreateAsync(review);

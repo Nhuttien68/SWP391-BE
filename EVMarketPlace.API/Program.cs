@@ -66,6 +66,8 @@ builder.Services.AddScoped<PostPackageRepository>();
 builder.Services.AddScoped<WalletTransactionRepository>();
 builder.Services.AddScoped<WithdrawalRequestRepository>();
 builder.Services.AddScoped<SystemSettingRepository>();
+// Add Utils
+builder.Services.AddScoped<TimeHelper>();
 
 // Add Cart Repositories
 builder.Services.AddScoped<CartRepository>();

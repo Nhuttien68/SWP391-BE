@@ -4,6 +4,7 @@ using EVMarketPlace.Repositories.Enums;
 using EVMarketPlace.Repositories.Repository;
 using EVMarketPlace.Repositories.RequestDTO;
 using EVMarketPlace.Repositories.ResponseDTO;
+using EVMarketPlace.Repositories.Utils;
 using EVMarketPlace.Services.Interfaces;
 using System.Security.Claims;
 
@@ -20,9 +21,10 @@ namespace EVMarketPlace.Services.Implements
         private readonly WalletRepository _walletRepository;
         private readonly WalletTransactionRepository _walletTransactionRepository;
         private readonly UserRepository _userRepository;
-
+        private readonly TimeHelper _timeHelper;
         public TransactionService(
-            TransactionRepository transactionRepository,
+            TimeHelper timeHelper,
+        TransactionRepository transactionRepository,
             PostRepository postRepository,
             CartRepository cartRepository,
             CartItemRepository cartItemRepository,
@@ -32,6 +34,7 @@ namespace EVMarketPlace.Services.Implements
             WalletTransactionRepository walletTransactionRepository,
             UserRepository userRepository)
         {
+            _timeHelper = timeHelper;
             _transactionRepository = transactionRepository;
             _postRepository = postRepository;
             _cartRepository = cartRepository;
@@ -232,7 +235,7 @@ namespace EVMarketPlace.Services.Implements
                         await _postRepository.UpdateStatusSoldAsync(item.PostId.Value);
                     }
                     catch { }
-
+                    var vietNamtime = _timeHelper.GetVietNamTime();
                     // Tạo transaction
                     var transaction = new Transaction
                     {
@@ -247,7 +250,7 @@ namespace EVMarketPlace.Services.Implements
                         SellerReceived = sellerReceived,
                         PaymentMethod = request.PaymentMethod,
                         Status = TransactionStatusEnum.COMPLETED.ToString(),
-                        CreatedAt = DateTime.UtcNow,
+                        CreatedAt = vietNamtime,
                         ReceiverName = request.ReceiverName,
                         ReceiverPhone = request.ReceiverPhone,
                         ReceiverAddress = request.ReceiverAddress,
@@ -347,7 +350,7 @@ namespace EVMarketPlace.Services.Implements
 
                 // TẠO TRANSACTION ID TRƯỚC
                 var transactionId = Guid.NewGuid();
-
+                var vietNamtime = _timeHelper.GetVietNamTime();
                 var transaction = new Transaction
                 {
                     TransactionId = transactionId,
@@ -360,7 +363,7 @@ namespace EVMarketPlace.Services.Implements
                     SellerReceived = sellerReceived,
                     PaymentMethod = request.PaymentMethod,
                     Status = TransactionStatusEnum.COMPLETED.ToString(),
-                    CreatedAt = DateTime.UtcNow,
+                    CreatedAt = vietNamtime,
                     ReceiverName = request.ReceiverName,
                     ReceiverPhone = request.ReceiverPhone,
                     ReceiverAddress = request.ReceiverAddress,

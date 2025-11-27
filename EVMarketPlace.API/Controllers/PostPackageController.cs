@@ -17,7 +17,7 @@ namespace EVMarketPlace.API.Controllers
         {
             _postPackgeService = postPackgeService;
         }
-
+       
         [HttpPost ("create-postpackage")]
         public async Task<IActionResult> Create([FromBody] CreatePostPackageDTO dto)
         {
@@ -33,6 +33,7 @@ namespace EVMarketPlace.API.Controllers
         }
 
         [HttpGet("get-all")]
+        [AllowAnonymous]
         public async Task<IActionResult> GetAll()
         {
             var resp = await _postPackgeService.GetAllPostPackagesAsync();
@@ -40,6 +41,7 @@ namespace EVMarketPlace.API.Controllers
         }
 
         [HttpPut("update-postpackage")]
+       
         public async Task<IActionResult> Update([FromBody] UpdatePostPackageDTO dto)
         {
             var resp = await _postPackgeService.UpdatePostPackageAsync(dto);
@@ -47,6 +49,7 @@ namespace EVMarketPlace.API.Controllers
         }
 
         [HttpDelete("delete/{id:guid}")]
+       
         public async Task<IActionResult> Delete([FromRoute] Guid id)
         {
             var resp = await _postPackgeService.DeletePostPackageAsync(id);

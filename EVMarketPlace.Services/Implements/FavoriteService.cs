@@ -17,6 +17,7 @@ namespace EVMarketPlace.Services.Implements
     {
         private readonly FavoriteRepositori _favoriteRepositori;
         private readonly UserUtility _userUtility;
+
         public FavoriteService( FavoriteRepositori favoriteRepositori, UserUtility userUtility)
         {
             _favoriteRepositori = favoriteRepositori;

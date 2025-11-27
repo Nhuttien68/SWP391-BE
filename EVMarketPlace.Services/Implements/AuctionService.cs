@@ -23,8 +23,9 @@ namespace EVMarketPlace.Services.Implements
         private readonly WalletTransactionRepository _walletTransactionRepository;
         private readonly PostRepository _postRepository;
         private readonly SystemSettingRepository _systemSettingRepository;
-
+        private readonly TimeHelper _timeHelper;
         public AuctionService(
+            TimeHelper timeHelper,
             AuctionRepository auctionRepository,
             TransactionRepository transactionRepository,
             IWalletService walletService,
@@ -43,6 +44,7 @@ namespace EVMarketPlace.Services.Implements
             _walletTransactionRepository = walletTransactionRepository;
             _postRepository = postRepository;
             _systemSettingRepository = systemSettingRepository;
+            _timeHelper = timeHelper;
 
         }
 
@@ -50,6 +52,7 @@ namespace EVMarketPlace.Services.Implements
         {
             try
             {
+                var vietNamtime = _timeHelper.GetVietNamTime();
                 var userId = _userUtility.GetUserIdFromToken();
                 var post = await _auctionRepository.GetPostByIdAsync(req.PostId);
                 if (post == null)
@@ -246,7 +249,7 @@ namespace EVMarketPlace.Services.Implements
                     _logger.LogWarning($"Auction {auction.AuctionId} failed: Deduct failed");
                     continue;
                 }
-
+                var vietNamtime = _timeHelper.GetVietNamTime();
                 // Tạo WalletTransaction với description có ý nghĩa
                 await _walletTransactionRepository.CreateLogAsync(new WalletTransaction
                 {
@@ -259,7 +262,7 @@ namespace EVMarketPlace.Services.Implements
                     ReferenceId = auctionCloseTransactionId,
                     PaymentMethod = "WALLET",
                     Description = $"Thanh toán đấu giá: {postTitle}",
-                    CreatedAt = DateTime.UtcNow
+                    CreatedAt = vietNamtime,
                 });
 
                 // 🔹 Lấy ví người bán
@@ -296,6 +299,7 @@ namespace EVMarketPlace.Services.Implements
                     _logger.LogWarning($"Auction {auction.AuctionId} failed: Cannot add to seller wallet");
                     continue;
                 }
+                
 
                 // Tạo WalletTransaction cho seller với description rõ ràng
                 string auctionTransId = $"AUCTION_{auction.AuctionId}_{DateTime.UtcNow.Ticks}";
@@ -310,7 +314,7 @@ namespace EVMarketPlace.Services.Implements
                     ReferenceId = auctionTransId,
                     PaymentMethod = "AuctionPayout",
                     Description = $"Nhận tiền từ đấu giá: {postTitle}",
-                    CreatedAt = DateTime.UtcNow
+                    CreatedAt = vietNamtime,
                 });
 
                 // 🏆 Gán người thắng
@@ -322,6 +326,7 @@ namespace EVMarketPlace.Services.Implements
                 auction.Post.Status = PostStatusEnum.SOLD.ToString();
                 await _postRepository.UpdateAsync(auction.Post);
                 _logger.LogInformation($"Auction {auction.AuctionId} completed successfully. Post {auction.Post.PostId} marked as SOLD.");
+               
 
                 // 🧾 Tạo transaction chính (bao gồm thông tin phí hoa hồng)
                 var trans = new Transaction
@@ -335,7 +340,7 @@ namespace EVMarketPlace.Services.Implements
                     CommissionAmount = commissionAmount,
                     PaymentMethod = "Wallet",
                     Status = TransactionStatusEnum.PENDING.ToString(),
-                    CreatedAt = DateTime.UtcNow
+                    CreatedAt = vietNamtime
                 };
                 await _transactionRepository.CreateAsync(trans);
 

@@ -23,7 +23,7 @@ namespace EVMarketPlace.Services.Implements
         private readonly WalletTransactionRepository _walletTransactionRepository;
         private readonly UserUtility _userUtility;
         private readonly ILogger<WithdrawalService> _logger;
-
+        private readonly TimeHelper _timeHelper;
         #endregion
 
         #region Constructor
@@ -32,12 +32,15 @@ namespace EVMarketPlace.Services.Implements
         /// Khởi tạo WithdrawalService với các dependencies cần thiết
         /// </summary>
         public WithdrawalService(
+            TimeHelper timeHelper,
             WithdrawalRequestRepository withdrawalRepository,
             WalletRepository walletRepository,
             WalletTransactionRepository walletTransactionRepository,
             UserUtility userUtility,
+
             ILogger<WithdrawalService> logger)
         {
+            _timeHelper = timeHelper;
             _withdrawalRepository = withdrawalRepository;
             _walletRepository = walletRepository;
             _walletTransactionRepository = walletTransactionRepository;
@@ -79,7 +82,7 @@ namespace EVMarketPlace.Services.Implements
                 var currentBalance = wallet.Balance ?? 0;
                 if (currentBalance < request.Amount)
                     return CreateResponse(400, $"Số dư không đủ. Hiện có: {currentBalance:N0} VNĐ");
-
+                var vietNamtime = _timeHelper.GetVietNamTime();
                 // Tạo yêu cầu rút tiền với status PENDING
                 var withdrawal = new WithdrawalRequest
                 {
@@ -91,7 +94,7 @@ namespace EVMarketPlace.Services.Implements
                     BankAccountNumber = request.BankAccountNumber,
                     BankAccountName = request.BankAccountName,
                     Status = "PENDING",
-                    RequestedAt = DateTime.UtcNow,
+                    RequestedAt = vietNamtime,
                     Note = request.Note
                 };
 
@@ -254,7 +257,7 @@ namespace EVMarketPlace.Services.Implements
 
                 if (!success)
                     return CreateResponse(500, "Không thể trừ tiền từ ví. Vui lòng thử lại.");
-
+                var vietNamtime = _timeHelper.GetVietNamTime();
                 // Log lịch sử giao dịch vào WalletTransactions
                 await _walletTransactionRepository.CreateLogAsync(new WalletTransaction
                 {
@@ -267,12 +270,12 @@ namespace EVMarketPlace.Services.Implements
                     ReferenceId = withdrawalId.ToString(),
                     PaymentMethod = "BANK",
                     Description = $"Rút tiền về {withdrawal.BankName} - {withdrawal.BankAccountNumber}",
-                    CreatedAt = DateTime.UtcNow
+                    CreatedAt = vietNamtime
                 });
 
                 // Cập nhật trạng thái yêu cầu
                 withdrawal.Status = "APPROVED";
-                withdrawal.ProcessedAt = DateTime.UtcNow;
+                withdrawal.ProcessedAt = vietNamtime;
                 withdrawal.ProcessedBy = adminId;
                 withdrawal.AdminNote = adminNote;
                 await _withdrawalRepository.UpdateAsync(withdrawal);

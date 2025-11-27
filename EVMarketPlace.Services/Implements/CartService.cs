@@ -4,6 +4,7 @@ using EVMarketPlace.Repositories.Enums;
 using EVMarketPlace.Repositories.Repository;
 using EVMarketPlace.Repositories.RequestDTO;
 using EVMarketPlace.Repositories.ResponseDTO;
+using EVMarketPlace.Repositories.Utils;
 using EVMarketPlace.Services.Interfaces;
 using Microsoft.AspNetCore.Http;
 using System.Security.Claims;
@@ -19,8 +20,9 @@ namespace EVMarketPlace.Services.Implements
         private readonly CartRepository _cartRepository;
         private readonly CartItemRepository _cartItemRepository;
         private readonly PostRepository _postRepository;
-
+        private readonly TimeHelper _timeHelper;
         public CartService(
+            TimeHelper timeHelper,
             CartRepository cartRepository,
             CartItemRepository cartItemRepository,
             PostRepository postRepository)
@@ -28,6 +30,7 @@ namespace EVMarketPlace.Services.Implements
             _cartRepository = cartRepository;
             _cartItemRepository = cartItemRepository;
             _postRepository = postRepository;
+            _timeHelper = timeHelper;
         }
 
         #region Public Methods
@@ -398,13 +401,14 @@ namespace EVMarketPlace.Services.Implements
             {
                 return cart;
             }
+            var vietNamtime = _timeHelper.GetVietNamTime();
 
             // Tạo mới cart với status ACTIVE
             var newCart = new ShoppingCart
             {
                 CartId = Guid.NewGuid(),
                 UserId = userId,
-                CreatedAt = DateTime.UtcNow,
+                CreatedAt = vietNamtime,
                 Status = CartStatusEnum.ACTIVE.ToString()
             };
 

@@ -2,6 +2,7 @@
 using EVMarketPlace.Repositories.Repository;
 using EVMarketPlace.Repositories.RequestDTO;
 using EVMarketPlace.Repositories.ResponseDTO;
+using EVMarketPlace.Repositories.Utils;
 using EVMarketPlace.Services.Interfaces;
 using Microsoft.AspNetCore.Http;
 using System;
@@ -15,22 +16,25 @@ namespace EVMarketPlace.Services.Implements
     public class PostPackgeService : IPostPackgeService
     {
         private readonly PostPackageRepository _postPackageRepository;
-        public PostPackgeService(PostPackageRepository postPackageRepository)
+        private readonly TimeHelper _timHelpere ;
+        public PostPackgeService(PostPackageRepository postPackageRepository, TimeHelper timHelpere)
         {
             _postPackageRepository = postPackageRepository;
+            _timHelpere = timHelpere;
         }
 
         public async Task<BaseResponse> CreatePostPackageAsync(CreatePostPackageDTO createPostPackageDTO)
         {
             try
             {
+                var vietNamtime = _timHelpere.GetVietNamTime();
                 var newpostPackage = new PostPackage
                 {
                     PackageId = Guid.NewGuid(),
                     PackageName = createPostPackageDTO.PackageName,
                     Price = createPostPackageDTO.Price,
                     DurationInDays = createPostPackageDTO.DurationInDays,
-                    CreatedAt = DateTime.UtcNow,
+                    CreatedAt = vietNamtime,
                     IsActive = true
                 };
                 await _postPackageRepository.CreateAsync(newpostPackage);

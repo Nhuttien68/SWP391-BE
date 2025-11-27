@@ -18,10 +18,11 @@ namespace EVMarketPlace.Services.Implements
         private readonly WalletRepository _walletRepository;
         private readonly ILogger<WalletService> _logger;
         private readonly WalletTransactionRepository _walletTransactionRepository;
-
+        private readonly TimeHelper _timeHelper;
         
 
         public WalletService(
+            TimeHelper timeHelper,
             UserUtility userUtility,
             WalletRepository walletRepository,
             WalletTransactionRepository walletTransactionRepository,
@@ -31,6 +32,7 @@ namespace EVMarketPlace.Services.Implements
             _walletRepository = walletRepository;
             _walletTransactionRepository = walletTransactionRepository;
             _logger = logger;
+            _timeHelper = timeHelper;
         }
 
         /// <summary>
@@ -202,7 +204,7 @@ namespace EVMarketPlace.Services.Implements
 
                 var oldBalance = wallet.Balance ?? 0;
                 var (success, newBalance) = await _walletRepository.TryUpdateBalanceAsync(wallet.WalletId, amount);
-
+                var vietNamtime = _timeHelper.GetVietNamTime();
                 if (!success)
                     return CreateErrorResponse("Cập nhật ví thất bại. Vui lòng thử lại.");
                 // Log lịch sử giao dịch nạp tiền
@@ -217,7 +219,7 @@ namespace EVMarketPlace.Services.Implements
                     ReferenceId = transactionId,
                     PaymentMethod = paymentMethod,
                     Description = $"Nạp tiền vào ví qua {paymentMethod}",
-                    CreatedAt = DateTime.UtcNow
+                    CreatedAt = vietNamtime
                 });
 
                 _logger.LogInformation(
@@ -291,7 +293,7 @@ namespace EVMarketPlace.Services.Implements
                 var (success, newBalance) = await _walletRepository.TryUpdateBalanceAsync(wallet.WalletId, -amount);
                 if (!success)
                     return CreateErrorResponse("Trừ tiền thất bại.");
-
+                var vietNamtime = _timeHelper.GetVietNamTime();
                 // ✅ LOG LỊCH SỬ
                 await _walletTransactionRepository.CreateLogAsync(new WalletTransaction
                 {
@@ -304,7 +306,7 @@ namespace EVMarketPlace.Services.Implements
                     ReferenceId = transactionId,
                     PaymentMethod = "WALLET",
                     Description = $"Thanh toán cho giao dịch {transactionId}",
-                    CreatedAt = DateTime.UtcNow
+                    CreatedAt = vietNamtime
                 });
 
                 return CreateResponse(StatusCodes.Status200OK, "Trừ tiền thành công.", new
@@ -345,7 +347,7 @@ namespace EVMarketPlace.Services.Implements
                     return CreateErrorResponse("Cập nhật ví thất bại. Vui lòng thử lại.");
 
                 var description = $"Nhận tiền từ bán hàng: '{(!string.IsNullOrEmpty(postTitle) ? postTitle : "Sản phẩm không có tiêu đề")}'";
-
+                var vietNamtime = _timeHelper.GetVietNamTime();
                 //  LOG LỊCH SỬ - Cộng tiền từ BÁN HÀNG
                 await _walletTransactionRepository.CreateLogAsync(new WalletTransaction
                 {
@@ -358,7 +360,7 @@ namespace EVMarketPlace.Services.Implements
                     ReferenceId = transactionId,
                     PaymentMethod = "WALLET",
                     Description = description,
-                    CreatedAt = DateTime.UtcNow
+                    CreatedAt = vietNamtime
                 });
 
                 _logger.LogInformation(

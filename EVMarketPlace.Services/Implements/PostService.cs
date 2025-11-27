@@ -23,8 +23,9 @@ namespace EVMarketPlace.Services.Implements
         private readonly FirebaseStorageService _firebaseStorage;
         private readonly PostPackageRepository _postPackageRepository;
         private readonly WalletTransactionRepository _walletTransactionRepository;
+        private readonly TimeHelper _timHelpere;
 
-        public PostService(WalletTransactionRepository walletTransactionRepository, WalletRepository walletRepositpry, PostRepository postRepository , UserUtility userUtility, FirebaseStorageService firebaseStorage, PostImageRepository postImageRepository, PostPackageRepository postPackageRepository)
+        public PostService(TimeHelper timHelpere,WalletTransactionRepository walletTransactionRepository, WalletRepository walletRepositpry, PostRepository postRepository , UserUtility userUtility, FirebaseStorageService firebaseStorage, PostImageRepository postImageRepository, PostPackageRepository postPackageRepository)
         {
             _postRepository = postRepository;
             _userUtility = userUtility;
@@ -32,10 +33,12 @@ namespace EVMarketPlace.Services.Implements
             _walletRepository = walletRepositpry;
             _postPackageRepository = postPackageRepository;
             _walletTransactionRepository = walletTransactionRepository;
+            _timHelpere = timHelpere;
         }
 
         public async Task<BaseResponse> ApprovedStatus(Guid id)
         {
+            var vietNamtime = _timHelpere.GetVietNamTime();
             var adminUserId = _userUtility.GetUserIdFromToken();
             if (adminUserId == Guid.Empty)
             {
@@ -98,7 +101,7 @@ namespace EVMarketPlace.Services.Implements
                 BalanceBefore = adminWallet.Balance,
                 BalanceAfter = adminWallet.Balance + postPackage.Price,
                 Description = $"Nhận phí duyệt bài ({postPackage.PackageName})",
-                CreatedAt = DateTime.UtcNow
+                CreatedAt = vietNamtime
             };
             await _walletTransactionRepository.CreateAsync(transaction);
 
@@ -144,8 +147,10 @@ namespace EVMarketPlace.Services.Implements
         // Tạo bài đăng về pin
         public async Task<BaseResponse> CreateBatteryPostAsync(PostCreateBatteryRequest request)
         {
+            
             try
             {
+                var vietNamtime = _timHelpere.GetVietNamTime();
                 var userId = _userUtility.GetUserIdFromToken();
                 if (userId == Guid.Empty)
                     throw new UnauthorizedAccessException("User ID not found in token.");
@@ -194,7 +199,7 @@ namespace EVMarketPlace.Services.Implements
                     BalanceBefore = wallet.Balance,
                     BalanceAfter = wallet.Balance - postPackage.Price,
                     Description = $"Trừ phí đăng bài ({postPackage.PackageName})",
-                    CreatedAt = DateTime.UtcNow
+                    CreatedAt = vietNamtime
                 };
                 await _walletTransactionRepository.CreateAsync(transaction);
 
@@ -209,7 +214,7 @@ namespace EVMarketPlace.Services.Implements
                     Title = request.Title,
                     Description = request.Description,
                     Price = request.Price,
-                    CreatedAt = DateTime.UtcNow,
+                    CreatedAt = vietNamtime,
                     ExpireAt = DateTime.UtcNow.AddDays(postPackage.DurationInDays), // tính ngày hết hạn
                     Status = PostStatusEnum.PENDING.ToString(),
                     PostImages = new List<PostImage>(),
@@ -321,7 +326,7 @@ namespace EVMarketPlace.Services.Implements
                         Data = null
                     };
                 }
-
+                var vietNamtime = _timHelpere.GetVietNamTime();
                 // Tạo giao dịch WalletTransaction
                 var transaction = new WalletTransaction
                 {
@@ -333,10 +338,10 @@ namespace EVMarketPlace.Services.Implements
                     PaymentMethod = "WALLET",
                     BalanceAfter = wallet.Balance - postPackage.Price,
                     Description = $"Trừ phí đăng bài ({postPackage.PackageName})",
-                    CreatedAt = DateTime.UtcNow
+                    CreatedAt = vietNamtime,
                 };
                 await _walletTransactionRepository.CreateAsync(transaction);
-
+               
                 // Tạo bài đăng
                 var newPost = new Post
                 {
@@ -348,8 +353,8 @@ namespace EVMarketPlace.Services.Implements
                     Title = request.Title,
                     Description = request.Description,
                     Price = request.Price,
-                    CreatedAt = DateTime.UtcNow,
-                    ExpireAt = DateTime.UtcNow.AddDays(postPackage.DurationInDays),
+                    CreatedAt = vietNamtime,
+                    ExpireAt = vietNamtime.AddDays(postPackage.DurationInDays),
                     Status = PostStatusEnum.PENDING.ToString(),
 
                     PostImages = new List<PostImage>(),
@@ -873,7 +878,7 @@ namespace EVMarketPlace.Services.Implements
                         Message = "Failed to refund user wallet."
                     };
                 }
-
+                var vietNamtime = _timHelpere.GetVietNamTime();
                 // Tạo WalletTransaction ghi lại giao dịch hoàn tiền
                 var transaction = new WalletTransaction
                 {
@@ -884,7 +889,7 @@ namespace EVMarketPlace.Services.Implements
                     BalanceBefore = userWallet.Balance,
                     BalanceAfter = userWallet.Balance + postPackage.Price,
                     Description = $"Hoàn tiền gói đăng bài ({postPackage.PackageName}) do bài bị từ chối",
-                    CreatedAt = DateTime.UtcNow
+                    CreatedAt = vietNamtime
                 };
                 await _walletTransactionRepository.CreateAsync(transaction);
 
