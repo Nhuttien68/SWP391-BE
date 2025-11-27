@@ -21,6 +21,8 @@ namespace EVMarketPlace.Services.Interfaces
         Task<BaseResponse> GetTransactionsByMonthAsync(ClaimsPrincipal user, int month, int year);
         Task<BaseResponse> GetTransactionsByYearAsync(ClaimsPrincipal user, int year);
         Task<BaseResponse> GetTransactionsByDateRangeAsync(ClaimsPrincipal user, DateTime startDate, DateTime endDate);
+        // Cập nhật thông tin giao hàng cho đơn đấu giá
+        Task<BaseResponse> UpdateAuctionDeliveryInfoAsync(ClaimsPrincipal user, Guid transactionId, UpdateDeliveryInfoRequest request);
 
     }
 }

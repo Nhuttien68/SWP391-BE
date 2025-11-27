@@ -830,6 +830,72 @@ namespace EVMarketPlace.Services.Implements
             return user.FindFirst(ClaimTypes.Role)?.Value ?? string.Empty;
         }
 
+        public async Task<BaseResponse> UpdateAuctionDeliveryInfoAsync(ClaimsPrincipal user, Guid transactionId, UpdateDeliveryInfoRequest request)
+        {
+            try
+            {
+                var userId = GetUserId(user);
+                if (userId == Guid.Empty)
+                {
+                    return Response(401, "Vui lòng đăng nhập");
+                }
+
+                var transaction = await _transactionRepository.GetByIdAsync(transactionId);
+                if (transaction == null)
+                {
+                    return Response(404, "Không tìm thấy giao dịch");
+                }
+
+                // Kiểm tra quyền: chỉ người mua mới được cập nhật
+                if (transaction.BuyerId != userId)
+                {
+                    return Response(403, "Bạn không có quyền cập nhật thông tin giao hàng của đơn này");
+                }
+
+                // Kiểm tra trạng thái: chỉ cập nhật được khi PENDING
+                if (transaction.Status != TransactionStatusEnum.PENDING.ToString())
+                {
+                    return Response(400, "Chỉ có thể cập nhật thông tin khi đơn hàng đang chờ xử lý");
+                }
+
+                // Validate dữ liệu
+                if (string.IsNullOrWhiteSpace(request.ReceiverName))
+                {
+                    return Response(400, "Tên người nhận không được để trống");
+                }
+                if (string.IsNullOrWhiteSpace(request.ReceiverPhone))
+                {
+                    return Response(400, "Số điện thoại người nhận không được để trống");
+                }
+                if (string.IsNullOrWhiteSpace(request.ReceiverAddress))
+                {
+                    return Response(400, "Địa chỉ người nhận không được để trống");
+                }
+
+                // Cập nhật thông tin
+                transaction.ReceiverName = request.ReceiverName;
+                transaction.ReceiverPhone = request.ReceiverPhone;
+                transaction.ReceiverAddress = request.ReceiverAddress;
+                transaction.Note = request.Note;
+                transaction.Status = TransactionStatusEnum.COMPLETED.ToString();
+
+                await _transactionRepository.UpdateAsync(transaction);
+
+                return Response(200, "Cập nhật thông tin giao hàng thành công", new
+                {
+                    TransactionId = transaction.TransactionId,
+                    ReceiverName = transaction.ReceiverName,
+                    ReceiverPhone = transaction.ReceiverPhone,
+                    ReceiverAddress = transaction.ReceiverAddress,
+                    Status = transaction.Status
+                });
+            }
+            catch (Exception ex)
+            {
+                return Response(500, $"Lỗi: {ex.Message}");
+            }
+        }
+
         // Helper: Map sang DTO
         private async Task<TransactionResponseDTO> MapToDTO(Transaction t)
         {

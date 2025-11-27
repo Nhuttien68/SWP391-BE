@@ -76,6 +76,14 @@ namespace EVMarketPlace.API.Controllers
             return StatusCode(int.Parse(response.Status), response);
         }
 
+        // Cập nhật thông tin giao hàng cho đơn đấu giá (Buyer only)
+        [HttpPut("{id}/delivery-info")]
+        public async Task<IActionResult> UpdateAuctionDeliveryInfo([FromRoute] Guid id, [FromBody] UpdateDeliveryInfoRequest request)
+        {
+            var response = await _transactionService.UpdateAuctionDeliveryInfoAsync(User, id, request);
+            return StatusCode(int.Parse(response.Status), response);
+        }
+
         // Lấy tất cả giao dịch (Admin only)
         [HttpGet("all")]
         public async Task<IActionResult> GetAll()

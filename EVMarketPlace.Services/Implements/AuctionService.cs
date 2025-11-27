@@ -23,6 +23,8 @@ namespace EVMarketPlace.Services.Implements
         private readonly WalletTransactionRepository _walletTransactionRepository;
         private readonly PostRepository _postRepository;
         private readonly SystemSettingRepository _systemSettingRepository;
+        private readonly UserRepository _userRepository;
+
         private readonly TimeHelper _timeHelper;
         public AuctionService(
             TimeHelper timeHelper,
@@ -33,6 +35,7 @@ namespace EVMarketPlace.Services.Implements
             WalletTransactionRepository walletTransactionRepository,
             PostRepository postRepository,
             SystemSettingRepository systemSettingRepository,
+            UserRepository userRepository,
             ILogger<AuctionService> logger, UserUtility userUtility)
         {
             _auctionRepository = auctionRepository;
@@ -45,6 +48,7 @@ namespace EVMarketPlace.Services.Implements
             _postRepository = postRepository;
             _systemSettingRepository = systemSettingRepository;
             _timeHelper = timeHelper;
+            _userRepository = userRepository;
 
         }
 
@@ -316,6 +320,41 @@ namespace EVMarketPlace.Services.Implements
                     Description = $"Nhận tiền từ đấu giá: {postTitle}",
                     CreatedAt = vietNamtime,
                 });
+
+                // 💰 Cộng phí hoa hồng vào ví hệ thống (Admin)
+                // Lấy admin user đầu tiên (hoặc có thể cấu hình SystemUserId)
+                var adminUser = await _userRepository.GetAdminUserAsync();
+                if (adminUser != null && commissionAmount > 0)
+                {
+                    var adminWallet = await _walletRepository.GetWalletByUserIdAsync(adminUser.UserId);
+                    if (adminWallet != null)
+                    {
+                        var adminCurrentBalance = adminWallet.Balance ?? 0;
+                        var adminResult = await _walletRepository.TryUpdateBalanceAsync(adminWallet.WalletId, commissionAmount);
+                        bool adminSuccess = adminResult.Item1;
+                        decimal adminNewBalance = adminResult.Item2;
+                        
+                        if (adminSuccess)
+                        {
+                            // Tạo WalletTransaction cho admin
+                            string commissionTransId = $"COMMISSION_{auction.AuctionId}_{DateTime.UtcNow.Ticks}";
+                            await _walletTransactionRepository.CreateLogAsync(new WalletTransaction
+                            {
+                                WalletTransactionId = Guid.NewGuid(),
+                                WalletId = adminWallet.WalletId,
+                                TransactionType = "TOPUP",
+                                Amount = commissionAmount,
+                                BalanceBefore = adminCurrentBalance,
+                                BalanceAfter = adminNewBalance,
+                                ReferenceId = commissionTransId,
+                                PaymentMethod = "Commission",
+                                Description = $"Phí hoa hồng từ đấu giá: {postTitle}",
+                                CreatedAt = DateTime.UtcNow
+                            });
+                            _logger.LogInformation($"Commission {commissionAmount} added to admin wallet for auction {auction.AuctionId}");
+                        }
+                    }
+                }
 
                 // 🏆 Gán người thắng
                 auction.WinnerId = highestBid.UserId.Value;
