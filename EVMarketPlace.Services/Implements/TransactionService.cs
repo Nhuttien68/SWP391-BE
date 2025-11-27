@@ -455,7 +455,8 @@ namespace EVMarketPlace.Services.Implements
                                 postToRollback.Status = PostStatusEnum.APPROVED.ToString();
                                 await _postRepository.UpdateAsync(postToRollback);
                             }
-                        } catch { }
+                        }
+                        catch { }
 
                         // Hoàn tiền cho buyer
                         await _walletService.TopUpWalletAsync(

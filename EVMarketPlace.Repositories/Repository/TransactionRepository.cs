@@ -98,12 +98,15 @@ namespace EVMarketPlace.Repositories.Repository
         // ✅ Hàm lấy tất cả transaction trong khoảng thời gian nhất định
         public async Task<List<Transaction>> GetByDateRangeAsync(DateTime startDate, DateTime endDate)
         {
+            // Thêm 1 ngày vào endDate để bao gồm cả ngày cuối (23:59:59)
+            var adjustedEndDate = endDate.Date.AddDays(1).AddSeconds(-1);
+            
             return await _context.Transactions
                 .Include(t => t.Buyer)
                 .Include(t => t.Seller)
                 .Include(t => t.Post)
                     .ThenInclude(p => p.PostImages)
-                .Where(t => t.CreatedAt >= startDate && t.CreatedAt <= endDate)
+                .Where(t => t.CreatedAt >= startDate && t.CreatedAt <= adjustedEndDate)
                 .OrderByDescending(t => t.CreatedAt)
                 .ToListAsync();
         }
