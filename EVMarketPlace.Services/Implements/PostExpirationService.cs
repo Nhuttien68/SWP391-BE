@@ -32,16 +32,19 @@ namespace EVMarketPlace.Services.Implements
                     using var scope = _scopeFactory.CreateScope();
                     var postRepo = scope.ServiceProvider.GetRequiredService<PostRepository>();
 
-                    await postRepo.HideExpiredPostsAsync();
-
-                    _logger.LogInformation("Checked and updated expired posts at {time}", DateTime.UtcNow);
+                    var count = await postRepo.HideExpiredPostsAsync();
+                    
+                    if (count > 0)
+                    {
+                        _logger.LogInformation("Hidden {count} expired posts at {time}", count, DateTime.UtcNow);
+                    }
                 }
                 catch (Exception ex)
                 {
                     _logger.LogError(ex, "Error in PostExpirationService.");
                 }
 
-                // Chờ 5 phút trước khi chạy lại
+                // Chờ 1 phút trước khi chạy lại
                 await Task.Delay(TimeSpan.FromMinutes(1), stoppingToken);
             }
         }
