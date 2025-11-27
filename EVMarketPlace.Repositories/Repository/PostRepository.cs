@@ -1154,7 +1154,7 @@ namespace EVMarketPlace.Repositories.Repository
                .ThenInclude(v => v.Brand)
                .Include(p => p.Battery)
                .ThenInclude(b => b.Brand)
-               .Where(p => p.Status == PostStatusEnum.PENNDING.ToString())
+               .Where(p => p.Status == PostStatusEnum.PENDING.ToString())
                .ToListAsync();
         }
         // Đếm tổng số bài đăng
@@ -1215,6 +1215,25 @@ namespace EVMarketPlace.Repositories.Repository
                 .ToListAsync();
         }
 
+        // Ẩn các bài đăng đã hết hạn (ExpireAt < now)
+        public async Task<int> HideExpiredPostsAsync()
+        {
+            var now = DateTime.UtcNow;
+            var expiredPosts = await _context.Posts
+                .Where(p => p.ExpireAt < now
+                         && p.Status == PostStatusEnum.APPROVED.ToString())
+                .ToListAsync();
 
+            if (!expiredPosts.Any())
+                return 0;
+
+            foreach (var post in expiredPosts)
+            {
+                post.Status = PostStatusEnum.EXPIRED.ToString();
+            }
+
+            await _context.SaveChangesAsync();
+            return expiredPosts.Count();
+        }
     }
 }

@@ -415,7 +415,12 @@ namespace EVMarketPlace.Services.Implements
                         // Rollback: Đặt lại post thành APPROVED
                         try
                         {
-                            await _postRepository.UpdateStatusApprovedAsync(request.PostId);
+                            var postToRollback = await _postRepository.GetByIdAsync(request.PostId);
+                            if (postToRollback != null)
+                            {
+                                postToRollback.Status = PostStatusEnum.APPROVED.ToString();
+                                await _postRepository.UpdateAsync(postToRollback);
+                            }
                         }
                         catch { }
 
@@ -444,9 +449,13 @@ namespace EVMarketPlace.Services.Implements
                         // Rollback: Đặt lại post thành APPROVED
                         try
                         {
-                            await _postRepository.UpdateStatusApprovedAsync(request.PostId);
-                        }
-                        catch { }
+                            var postToRollback = await _postRepository.GetByIdAsync(request.PostId);
+                            if (postToRollback != null)
+                            {
+                                postToRollback.Status = PostStatusEnum.APPROVED.ToString();
+                                await _postRepository.UpdateAsync(postToRollback);
+                            }
+                        } catch { }
 
                         // Hoàn tiền cho buyer
                         await _walletService.TopUpWalletAsync(
