@@ -15,6 +15,7 @@ namespace EVMarketPlace.Repositories.ResponseDTO.Posts
         public decimal? Price { get; set; }
         public string Type { get; set; } = null!;
         public DateTime? CreatedAt { get; set; }
+         public DateTime ExpireAt { get; set; }
         public List<string>? ImageUrls { get; set; }
         public List<Guid>? ImgId { get; set; }
         public VehicleDto? Vehicle { get; set; }

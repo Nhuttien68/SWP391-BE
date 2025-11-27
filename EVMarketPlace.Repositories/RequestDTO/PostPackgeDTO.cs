@@ -32,7 +32,6 @@ namespace EVMarketPlace.Repositories.RequestDTO
         public int DurationInDays { get; set; }
         
         public DateTime? CreatedAt { get; set; }
-
         public bool? isActive { get; set; }    
     }
 }
