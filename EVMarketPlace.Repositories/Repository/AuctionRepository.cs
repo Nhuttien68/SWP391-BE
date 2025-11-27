@@ -15,6 +15,10 @@ namespace EVMarketPlace.Repositories.Repository
             return await _context.Auctions
                 .Include(a => a.Post)
                     .ThenInclude(p => p.PostImages)
+                .Include(a => a.Post)
+                    .ThenInclude(p => p.Vehicle)
+                .Include(a => a.Post)
+                    .ThenInclude(p => p.Battery)
                 .Include(a => a.AuctionBids)
                     .ThenInclude(b => b.User)
                 .FirstOrDefaultAsync(a => a.AuctionId == auctionId);
@@ -35,6 +39,10 @@ namespace EVMarketPlace.Repositories.Repository
             return await _context.Auctions
                 .Include(a => a.Post)
                     .ThenInclude(p => p.PostImages)
+                .Include(a => a.Post)
+                    .ThenInclude(p => p.Vehicle)
+                .Include(a => a.Post)
+                    .ThenInclude(p => p.Battery)
                 .Include(a => a.AuctionBids)
                     .ThenInclude(b => b.User)
                 .Where(a => a.Status == "Active" && a.EndTime > now)
