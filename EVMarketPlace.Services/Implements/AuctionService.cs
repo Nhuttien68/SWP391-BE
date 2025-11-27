@@ -20,6 +20,7 @@ namespace EVMarketPlace.Services.Implements
         private readonly UserUtility _userUtility;
         private readonly WalletRepository _walletRepository;
         private readonly WalletTransactionRepository _walletTransactionRepository;
+        private readonly PostRepository _postRepository;
 
         public AuctionService(
             AuctionRepository auctionRepository,
@@ -27,6 +28,7 @@ namespace EVMarketPlace.Services.Implements
             IWalletService walletService,
             WalletRepository walletRepository,
             WalletTransactionRepository walletTransactionRepository,
+            PostRepository postRepository,
             ILogger<AuctionService> logger, UserUtility userUtility)
         {
             _auctionRepository = auctionRepository;
@@ -36,6 +38,7 @@ namespace EVMarketPlace.Services.Implements
             _userUtility = userUtility;
             _walletRepository = walletRepository;
             _walletTransactionRepository = walletTransactionRepository;
+            _postRepository = postRepository;
 
         }
 
@@ -184,10 +187,20 @@ namespace EVMarketPlace.Services.Implements
                     .OrderByDescending(b => b.BidAmount)
                     .FirstOrDefault();
 
+                // ❌ KHÔNG CÓ AI ĐẶT GIÁ - Chuyển bài đăng về trạng thái bình thường
                 if (highestBid == null || highestBid.UserId == null)
                 {
                     auction.Status = "Ended";
                     await _auctionRepository.UpdateAsync(auction);
+
+                    // 🔄 Chuyển Post về trạng thái Active để có thể bán lại
+                    if (auction.Post != null)
+                    {
+                        auction.Post.Status = "Active";
+                        await _postRepository.UpdateAsync(auction.Post);
+                        _logger.LogInformation($"Auction {auction.AuctionId} ended with no bids. Post {auction.Post.PostId} returned to Active status.");
+                    }
+
                     continue;
                 }
 
