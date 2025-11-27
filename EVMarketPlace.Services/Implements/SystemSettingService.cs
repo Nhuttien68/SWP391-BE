@@ -121,12 +121,17 @@ namespace EVMarketPlace.Services.Implements
                     return Response(400, "Ngày bắt đầu phải trước ngày kết thúc.");
                 }
 
-                var transactions = await _transactionRepository.GetByDateRangeAsync(startDate, endDate);
+                var allTransactions = await _transactionRepository.GetByDateRangeAsync(startDate, endDate);
+                
+                // Chỉ tính các transaction có phí hoa hồng (CommissionAmount > 0)
+                var transactions = allTransactions
+                    .Where(t => t.CommissionAmount.HasValue && t.CommissionAmount.Value > 0)
+                    .ToList();
 
                 var totalTransactions = transactions.Count;
                 var totalRevenue = transactions.Sum(t => t.Amount ?? 0);
                 var totalCommission = transactions.Sum(t => t.CommissionAmount ?? 0);
-                var totalSellerReceived = transactions.Sum(t => t.SellerReceived ?? 0);
+                var totalSellerReceived = transactions.Sum(t => (t.Amount ?? 0) - (t.CommissionAmount ?? 0));
                 var avgCommissionRate = transactions.Any()
                     ? transactions.Average(t => t.CommissionRate ?? 0)
                     : 0;
