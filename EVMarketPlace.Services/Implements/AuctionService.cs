@@ -187,18 +187,18 @@ namespace EVMarketPlace.Services.Implements
                     .OrderByDescending(b => b.BidAmount)
                     .FirstOrDefault();
 
-                // ❌ KHÔNG CÓ AI ĐẶT GIÁ - Chuyển bài đăng về trạng thái bình thường
+                // ❌ KHÔNG CÓ AI ĐẶT GIÁ - Chuyển bài đăng về trạng thái APPROVED để có thể tạo đấu giá mới
                 if (highestBid == null || highestBid.UserId == null)
                 {
                     auction.Status = "Ended";
                     await _auctionRepository.UpdateAsync(auction);
 
-                    // 🔄 Chuyển Post về trạng thái Active để có thể bán lại
+                    // 🔄 Chuyển Post về trạng thái APPROVED để có thể bán lại hoặc tạo đấu giá mới
                     if (auction.Post != null)
                     {
-                        auction.Post.Status = "Active";
+                        auction.Post.Status = PostStatusEnum.APPROVED.ToString();
                         await _postRepository.UpdateAsync(auction.Post);
-                        _logger.LogInformation($"Auction {auction.AuctionId} ended with no bids. Post {auction.Post.PostId} returned to Active status.");
+                        _logger.LogInformation($"Auction {auction.AuctionId} ended with no bids. Post {auction.Post.PostId} returned to APPROVED status.");
                     }
 
                     continue;
