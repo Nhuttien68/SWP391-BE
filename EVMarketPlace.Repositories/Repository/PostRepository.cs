@@ -1236,25 +1236,6 @@ namespace EVMarketPlace.Repositories.Repository
             return expiredPosts.Count();
         }
 
-        // Ẩn các bài đăng đã hết hạn (ExpireAt < now)
-        public async Task<int> HideExpiredPostsAsync()
-        {
-            var now = DateTime.UtcNow;
-            var expiredPosts = await _context.Posts
-                .Where(p => p.ExpireAt < now
-                         && p.Status == PostStatusEnum.APPROVED.ToString())
-                .ToListAsync();
-
-            if (!expiredPosts.Any())
-                return 0;
-
-            foreach (var post in expiredPosts)
-            {
-                post.Status = PostStatusEnum.EXPIRED.ToString();
-            }
-
-            await _context.SaveChangesAsync();
-            return expiredPosts.Count();
-        }
+      
     }
 }
